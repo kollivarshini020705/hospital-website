@@ -41,17 +41,23 @@
   .page.active { display: block; }
 
   /* HERO */
-  .hero { background: linear-gradient(135deg, var(--teal-50) 0%, #fff 60%); padding: 5rem 2rem 4rem; text-align: center; }
-  .hero h1 { font-family: 'Lora', serif; font-size: 3rem; color: var(--teal-900); margin-bottom: 1rem; line-height: 1.2; }
-  .hero p { font-size: 1.1rem; color: var(--text-sec); max-width: 520px; margin: 0 auto 2.5rem; line-height: 1.7; }
-  .hero-btns { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
-  .hero-btns .btn { padding: 12px 28px; font-size: 1rem; border-radius: 10px; }
+  .hero { background: linear-gradient(135deg, var(--teal-50) 0%, #fff 100%); padding: 6rem 2rem 5rem; text-align: center; position: relative; overflow: hidden; }
+  .hero::before { content: ''; position: absolute; top: -50%; left: -10%; width: 50%; height: 200%; background: radial-gradient(circle, var(--teal-100) 0%, transparent 70%); opacity: 0.3; transform: rotate(-45deg); z-index: 0; }
+  .hero h1 { font-family: 'Lora', serif; font-size: 3.5rem; color: var(--teal-900); margin-bottom: 1.2rem; line-height: 1.2; position: relative; z-index: 1; animation: fadeInDown 0.8s ease-out; }
+  .hero p { font-size: 1.15rem; color: var(--text-sec); max-width: 580px; margin: 0 auto 2.5rem; line-height: 1.7; position: relative; z-index: 1; animation: fadeInUp 0.8s ease-out 0.2s both; }
+  .hero-btns { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; position: relative; z-index: 1; animation: fadeInUp 0.8s ease-out 0.4s both; }
+  .hero-btns .btn { padding: 14px 32px; font-size: 1.05rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(29, 158, 117, 0.2); }
+  .hero-btns .btn:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(29, 158, 117, 0.3); }
+  
+  @keyframes fadeInDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 
   /* FEATURES */
   .features { padding: 4rem 2rem; background: var(--bg-sec); }
   .features h2 { font-family: 'Lora', serif; text-align: center; font-size: 1.8rem; color: var(--teal-800); margin-bottom: 2.5rem; }
   .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.5rem; max-width: 900px; margin: 0 auto; }
-  .feature-card { background: white; border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; }
+  .feature-card { background: white; border: 1px solid var(--border); border-radius: 12px; padding: 1.8rem; transition: transform 0.3s ease, box-shadow 0.3s ease; }
+  .feature-card:hover { transform: translateY(-8px); box-shadow: 0 12px 24px rgba(0,0,0,0.06); border-color: var(--teal-100); }
   .feature-icon { width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-bottom: 1rem; font-size: 1.3rem; }
   .fi-teal { background: var(--teal-50); color: var(--teal-600); }
   .fi-blue { background: var(--blue-50); color: var(--blue-600); }
@@ -191,7 +197,9 @@
     <a href="#">Doctors</a>
     <a href="#">Services</a>
     <a href="#">Contact</a>
-    <a href="#" onclick="showPage('login')" style="font-weight:600; color:var(--teal-600);">Sign In / Sign Up</a>
+    <a href="#" id="nav-login-link" onclick="showPage('login')" style="font-weight:600; color:var(--teal-600);">Sign In / Sign Up</a>
+    <a href="#" id="nav-portal-link" onclick="showPage('portal')" style="font-weight:600; color:var(--teal-600); display:none;">My Portal</a>
+    <a href="#" id="nav-logout-link" onclick="doLogout()" style="font-weight:600; color:var(--coral-600); display:none;">Sign Out</a>
   </div>
 </nav>
 
@@ -200,9 +208,12 @@
   <div class="hero">
     <h1>Your Health,<br>Our Priority</h1>
     <p>Connect with experienced doctors from the comfort of your home. Get prescriptions, diet plans, and expert medical advice instantly.</p>
-    <div class="hero-btns" style="flex-direction: column; align-items: center; gap: 0.8rem;">
+    <div class="hero-btns" id="hero-auth-btns" style="flex-direction: column; align-items: center; gap: 0.8rem;">
       <button class="btn btn-primary" style="width: 200px;" onclick="showPage('login')">Sign In</button>
-      <span style="font-size: 0.9rem; color: var(--text-sec);">Don't have an account? <a href="#" onclick="showPage('signup')" style="color: var(--teal-600); text-decoration: none; font-weight: 600;">Create Account</a></span>
+      <span style="font-size: 0.95rem; color: var(--text-sec);">Don't have an account? <a href="#" onclick="showPage('signup')" style="color: var(--teal-600); text-decoration: none; font-weight: 600;">Create Account</a></span>
+    </div>
+    <div class="hero-btns" id="hero-portal-btn" style="display:none; justify-content: center;">
+      <button class="btn btn-primary" style="width: 220px;" onclick="showPage('portal')">Go to My Portal</button>
     </div>
   </div>
   <div class="features">
@@ -449,6 +460,7 @@ async function doLogin() {
       
       await fetchInitialData();
       setupPortal();
+      updateAuthUI(true);
       showPage('portal');
     } else {
       err.textContent = data.error || 'Invalid credentials.';
@@ -460,11 +472,28 @@ async function doLogin() {
   }
 }
 
+function updateAuthUI(isLoggedIn) {
+  if (isLoggedIn) {
+    document.getElementById('nav-login-link').style.display = 'none';
+    document.getElementById('nav-portal-link').style.display = 'inline';
+    document.getElementById('nav-logout-link').style.display = 'inline';
+    document.getElementById('hero-auth-btns').style.display = 'none';
+    document.getElementById('hero-portal-btn').style.display = 'flex';
+  } else {
+    document.getElementById('nav-login-link').style.display = 'inline';
+    document.getElementById('nav-portal-link').style.display = 'none';
+    document.getElementById('nav-logout-link').style.display = 'none';
+    document.getElementById('hero-auth-btns').style.display = 'flex';
+    document.getElementById('hero-portal-btn').style.display = 'none';
+  }
+}
+
 function doLogout() {
   currentUser = null;
   currentConv = null;
   document.getElementById('login-user').value = '';
   document.getElementById('login-pass').value = '';
+  updateAuthUI(false);
   showPage('home');
 }
 
