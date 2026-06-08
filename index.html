@@ -656,23 +656,14 @@ let signupRole = 'patient';
 
 const MockDB = {
   load: function() {
-    return JSON.parse(localStorage.getItem('medicare_db') || '{"users":{}, "conversations":{}}');
+    return JSON.parse(localStorage.getItem('medicare_db_v2') || '{"users":{}, "conversations":{}}');
   },
   save: function(data) {
-    localStorage.setItem('medicare_db', JSON.stringify(data));
+    localStorage.setItem('medicare_db_v2', JSON.stringify(data));
   },
   init: function() {
     const data = this.load();
-    if (Object.keys(data.users).length === 0) {
-      data.users['doc_sj'] = { username: 'doc_sj', password: 'password', role: 'doctor', name: 'Dr. Sarah Jenkins', initials: 'SJ', specialty: 'Cardiologist' };
-      data.users['doc_mr'] = { username: 'doc_mr', password: 'password', role: 'doctor', name: 'Dr. Michael Roberts', initials: 'MR', specialty: 'Neurologist' };
-      data.users['doc_el'] = { username: 'doc_el', password: 'password', role: 'doctor', name: 'Dr. Emily Larson', initials: 'EL', specialty: 'Dermatologist' };
-      data.users['doc_jp'] = { username: 'doc_jp', password: 'password', role: 'doctor', name: 'Dr. James Patel', initials: 'JP', specialty: 'Pediatrician' };
-      data.users['patient1'] = { username: 'patient1', password: 'password', role: 'patient', name: 'John Doe', initials: 'JD' };
-      data.conversations['conv1'] = { id: 'conv1', participants: ['doc_sj', 'patient1'], messages: [] };
-      data.conversations['conv2'] = { id: 'conv2', participants: ['doc_mr', 'patient1'], messages: [] };
-      this.save(data);
-    }
+    // No dummy data. Database starts completely empty and dynamic.
   },
   signup: function(req) {
     const data = this.load();
@@ -721,7 +712,7 @@ async function fetchInitialData() {
 }
 
 window.addEventListener('storage', (e) => {
-  if (e.key === 'medicare_db' && currentUser) {
+  if (e.key === 'medicare_db_v2' && currentUser) {
     fetchInitialData().then(() => {
       if (currentConv) renderMessages(currentConv);
       renderChatList();
@@ -739,12 +730,7 @@ function renderDoctorsGrid() {
   container.innerHTML = '';
   
   doctors.forEach(doc => {
-    let avatarHTML = '';
-    if (doc.username === 'doc_sj') avatarHTML = `<img src="images/doc_sj.png" class="doc-avatar" style="object-fit:cover;">`;
-    else if (doc.username === 'doc_mr') avatarHTML = `<img src="images/doc_mr.png" class="doc-avatar" style="object-fit:cover;">`;
-    else if (doc.username === 'doc_el') avatarHTML = `<img src="images/doc_el.png" class="doc-avatar" style="object-fit:cover;">`;
-    else if (doc.username === 'doc_jp') avatarHTML = `<img src="images/doc_jp.png" class="doc-avatar" style="object-fit:cover;">`;
-    else avatarHTML = `<div class="doc-avatar">${doc.initials}</div>`;
+    let avatarHTML = `<div class="doc-avatar">${doc.initials}</div>`;
 
     const docCard = `
       <div class="doc-card">
