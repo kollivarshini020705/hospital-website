@@ -43,21 +43,47 @@
   .page.active { display: block; }
 
   /* HERO */
-  .hero { background: linear-gradient(135deg, var(--teal-50) 0%, #fff 100%); padding: 6rem 2rem 5rem; text-align: center; position: relative; overflow: hidden; }
+  .hero { background: linear-gradient(135deg, var(--teal-50) 0%, #fff 100%); padding: 7rem 2rem 5rem; position: relative; overflow: hidden; }
   .hero::before { content: ''; position: absolute; top: -50%; left: -10%; width: 50%; height: 200%; background: radial-gradient(circle, var(--teal-100) 0%, transparent 70%); opacity: 0.3; transform: rotate(-45deg); z-index: 0; }
-  .hero h1 { font-family: 'Lora', serif; font-size: 3.5rem; color: var(--teal-900); margin-bottom: 1.2rem; line-height: 1.2; position: relative; z-index: 1; animation: fadeInDown 0.8s ease-out; }
-  .hero p { font-size: 1.15rem; color: var(--text-sec); max-width: 580px; margin: 0 auto 2.5rem; line-height: 1.7; position: relative; z-index: 1; animation: fadeInUp 0.8s ease-out 0.2s both; }
-  .hero-btns { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; position: relative; z-index: 1; animation: fadeInUp 0.8s ease-out 0.4s both; }
+  .hero-content-wrapper { max-width: 1100px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 4rem; position: relative; z-index: 1; }
+  .hero-text { flex: 1; text-align: left; }
+  .hero h1 { font-family: 'Lora', serif; font-size: 3.8rem; color: var(--teal-900); margin-bottom: 1.2rem; line-height: 1.15; animation: fadeInDown 0.8s ease-out; }
+  .hero p { font-size: 1.15rem; color: var(--text-sec); max-width: 500px; margin-bottom: 2.5rem; line-height: 1.7; animation: fadeInUp 0.8s ease-out 0.2s both; }
+  .hero-btns { display: flex; gap: 1rem; flex-wrap: wrap; align-items: center; animation: fadeInUp 0.8s ease-out 0.4s both; }
   .hero-btns .btn { padding: 14px 32px; font-size: 1.05rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(29, 158, 117, 0.2); }
   .hero-btns .btn:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(29, 158, 117, 0.3); }
+  .hero-image { flex: 1; display: flex; justify-content: flex-end; animation: fadeInUp 0.8s ease-out 0.3s both; }
+  .hero-image-placeholder { width: 100%; max-width: 500px; height: 380px; background: linear-gradient(135deg, var(--teal-100), var(--blue-50)); border-radius: 24px; border: 1px solid white; box-shadow: 0 20px 40px rgba(0,0,0,0.08); display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; }
+  .hero-image-placeholder::after { content: ''; position: absolute; inset: 0; background-image: radial-gradient(var(--teal-300) 2px, transparent 2px); background-size: 20px 20px; opacity: 0.15; }
+  .hero-image-placeholder span { font-size: 1.5rem; color: var(--teal-600); font-weight: 600; font-family: 'Lora', serif; position: relative; z-index: 1; background: white; padding: 12px 24px; border-radius: 30px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+  
+  /* QUICK STATS */
+  .quick-stats { background: white; padding: 3rem 2rem; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+  .stats-grid { max-width: 1000px; margin: 0 auto; display: flex; justify-content: space-around; flex-wrap: wrap; gap: 2rem; }
+  .stat-item { text-align: center; }
+  .stat-num { font-family: 'Lora', serif; font-size: 2.5rem; font-weight: 700; color: var(--teal-600); margin-bottom: 0.2rem; }
+  .stat-label { font-size: 0.95rem; font-weight: 600; color: var(--text-sec); text-transform: uppercase; letter-spacing: 0.05em; }
+  
+  /* TESTIMONIALS */
+  .testimonials-section { padding: 5rem 2rem; background: white; }
+  .testimonials-section h2 { font-family: 'Lora', serif; text-align: center; font-size: 2.2rem; color: var(--teal-900); margin-bottom: 3.5rem; }
+  .test-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem; max-width: 1000px; margin: 0 auto; }
+  .test-card { padding: 2.5rem 2rem; background: var(--bg-sec); border-radius: 16px; position: relative; border: 1px solid var(--border); transition: transform 0.3s; }
+  .test-card:hover { transform: translateY(-5px); }
+  .test-card::before { content: '"'; position: absolute; top: 10px; left: 20px; font-size: 5rem; font-family: serif; color: var(--teal-100); line-height: 1; z-index: 0; }
+  .test-text { font-size: 1rem; color: var(--text-sec); line-height: 1.6; margin-bottom: 1.5rem; position: relative; z-index: 1; font-style: italic; }
+  .test-author { display: flex; align-items: center; gap: 12px; position: relative; z-index: 1; }
+  .test-av { width: 45px; height: 45px; border-radius: 50%; background: linear-gradient(135deg, var(--teal-400), var(--blue-400)); color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.1rem; }
+  .test-name { font-size: 0.95rem; font-weight: 600; color: var(--text); display: block; }
+  .test-role { font-size: 0.8rem; color: var(--text-sec); }
   
   @keyframes fadeInDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
   @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 
   /* FEATURES */
-  .features { padding: 4rem 2rem; background: var(--bg-sec); }
-  .features h2 { font-family: 'Lora', serif; text-align: center; font-size: 1.8rem; color: var(--teal-800); margin-bottom: 2.5rem; }
-  .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.5rem; max-width: 900px; margin: 0 auto; }
+  .features { padding: 5rem 2rem; background: var(--bg-sec); }
+  .features h2 { font-family: 'Lora', serif; text-align: center; font-size: 2.2rem; color: var(--teal-900); margin-bottom: 3.5rem; }
+  .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 2rem; max-width: 1000px; margin: 0 auto; }
   .feature-card { background: white; border: 1px solid var(--border); border-radius: 12px; padding: 1.8rem; transition: transform 0.3s ease, box-shadow 0.3s ease; }
   .feature-card:hover { transform: translateY(-8px); box-shadow: 0 12px 24px rgba(0,0,0,0.06); border-color: var(--teal-100); }
   .feature-icon { width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-bottom: 1rem; font-size: 1.3rem; }
@@ -247,38 +273,105 @@
 <!-- HOME PAGE -->
 <div id="page-home" class="page active">
   <div class="hero">
-    <h1>Your Health,<br>Our Priority</h1>
-    <p>Connect with experienced doctors from the comfort of your home. Get prescriptions, diet plans, and expert medical advice instantly.</p>
-    <div class="hero-btns" id="hero-auth-btns" style="flex-direction: column; align-items: center; gap: 0.8rem;">
-      <button class="btn btn-primary" style="width: 200px;" onclick="showPage('login')">Sign In</button>
-      <span style="font-size: 0.95rem; color: var(--text-sec);">Don't have an account? <a href="#" onclick="showPage('signup')" style="color: var(--teal-600); text-decoration: none; font-weight: 600;">Create Account</a></span>
-    </div>
-    <div class="hero-btns" id="hero-portal-btn" style="display:none; justify-content: center;">
-      <button class="btn btn-primary" style="width: 220px;" onclick="showPage('portal')">Go to My Portal</button>
+    <div class="hero-content-wrapper">
+      <div class="hero-text">
+        <h1>Your Health,<br>Our Priority</h1>
+        <p>Connect with top-tier medical specialists from the comfort of your home. Receive instant prescriptions, diet plans, and expert medical advice tailored just for you.</p>
+        <div class="hero-btns" id="hero-auth-btns">
+          <button class="btn btn-primary" style="padding: 14px 36px;" onclick="showPage('login')">Sign In</button>
+          <button class="btn" style="background: white; border: 1px solid var(--border); color: var(--text);" onclick="showPage('signup')">Create Account</button>
+        </div>
+        <div class="hero-btns" id="hero-portal-btn" style="display:none;">
+          <button class="btn btn-primary" style="padding: 14px 40px;" onclick="showPage('portal')">Go to My Portal</button>
+        </div>
+      </div>
+      <div class="hero-image">
+        <div class="hero-image-placeholder">
+          <span>MediCare Live Portal</span>
+        </div>
+      </div>
     </div>
   </div>
+
+  <div class="quick-stats">
+    <div class="stats-grid">
+      <div class="stat-item">
+        <div class="stat-num">10,000+</div>
+        <div class="stat-label">Happy Patients</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-num">50+</div>
+        <div class="stat-label">Top Specialists</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-num">24/7</div>
+        <div class="stat-label">Live Support</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-num">4.9/5</div>
+        <div class="stat-label">Average Rating</div>
+      </div>
+    </div>
+  </div>
+
   <div class="features">
     <h2>Why Choose MediCare?</h2>
     <div class="features-grid">
-      <div class="feature-card">
+      <div class="feature-card" style="border-top: 4px solid var(--teal-500);">
         <div class="feature-icon fi-teal"></div>
         <h3>Live Doctor Chat</h3>
         <p>Consult certified doctors in real time, describe your symptoms and get immediate guidance.</p>
       </div>
-      <div class="feature-card">
+      <div class="feature-card" style="border-top: 4px solid var(--blue-500);">
         <div class="feature-icon fi-blue"></div>
         <h3>Digital Prescriptions</h3>
         <p>Receive structured prescriptions with medicine names, dosage, and duration directly in chat.</p>
       </div>
-      <div class="feature-card">
+      <div class="feature-card" style="border-top: 4px solid var(--purple-500);">
         <div class="feature-icon fi-purple"></div>
         <h3>Diet & Lifestyle Plans</h3>
         <p>Get personalised diet recommendations based on your health condition and treatment.</p>
       </div>
-      <div class="feature-card">
+      <div class="feature-card" style="border-top: 4px solid var(--amber-500);">
         <div class="feature-icon fi-amber"></div>
         <h3>Secure & Private</h3>
         <p>All conversations are confidential. Your health information is safe with us.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="testimonials-section">
+    <h2>What Our Patients Say</h2>
+    <div class="test-grid">
+      <div class="test-card">
+        <div class="test-text">"The doctors were incredibly responsive. I was able to get a prescription for my fever within 10 minutes without leaving my bed. Highly recommended!"</div>
+        <div class="test-author">
+          <div class="test-av">AM</div>
+          <div>
+            <span class="test-name">Alice M.</span>
+            <span class="test-role">Verified Patient</span>
+          </div>
+        </div>
+      </div>
+      <div class="test-card">
+        <div class="test-text">"As a busy professional, I don't have time to wait in hospital lobbies. The real-time chat and digital reports feature saved me hours of hassle."</div>
+        <div class="test-author">
+          <div class="test-av">JR</div>
+          <div>
+            <span class="test-name">James R.</span>
+            <span class="test-role">Verified Patient</span>
+          </div>
+        </div>
+      </div>
+      <div class="test-card">
+        <div class="test-text">"The diet plan provided by my assigned specialist was detailed and easy to follow. A truly modern and impressive healthcare experience."</div>
+        <div class="test-author">
+          <div class="test-av">SK</div>
+          <div>
+            <span class="test-name">Sarah K.</span>
+            <span class="test-role">Verified Patient</span>
+          </div>
+        </div>
       </div>
     </div>
   </div>
