@@ -376,6 +376,7 @@ let CONVERSATIONS = {};
 let currentUser = null;
 let currentConv = null;
 let signupRole = 'patient';
+let pollingInterval = null;
 
 const API_BASE = '/api';
 
@@ -390,6 +391,36 @@ async function fetchInitialData() {
   } catch(e) {
     console.error('Failed to fetch data', e);
   }
+}
+
+function startPolling() {
+  if (pollingInterval) clearInterval(pollingInterval);
+  pollingInterval = setInterval(async () => {
+    if (!currentUser) return;
+    try {
+      const cRes = await fetch(`${API_BASE}/conversations/${currentUser}`);
+      const newData = await cRes.json();
+      let hasUpdates = false;
+      
+      if (currentConv && newData[currentConv]) {
+        const oldLen = CONVERSATIONS[currentConv]?.messages?.length || 0;
+        const newLen = newData[currentConv].messages?.length || 0;
+        if (newLen > oldLen) hasUpdates = true;
+      }
+      if (!hasUpdates) {
+        for (let [id, conv] of Object.entries(newData)) {
+           const oldLen = CONVERSATIONS[id]?.messages?.length || 0;
+           if ((conv.messages?.length || 0) > oldLen) { hasUpdates = true; break; }
+        }
+      }
+
+      if (hasUpdates) {
+        CONVERSATIONS = newData;
+        if (currentConv) renderMessages(currentConv);
+        renderChatList();
+      }
+    } catch(e) {}
+  }, 3000);
 }
 
 function showPage(name) {
@@ -470,6 +501,7 @@ async function doLogin() {
       setupPortal();
       updateAuthUI(true);
       showPage('portal');
+      startPolling();
     } else {
       err.textContent = data.error || 'Invalid credentials.';
       err.style.display = 'block';
@@ -499,6 +531,8 @@ function updateAuthUI(isLoggedIn) {
 function doLogout() {
   currentUser = null;
   currentConv = null;
+  if (pollingInterval) clearInterval(pollingInterval);
+  pollingInterval = null;
   document.getElementById('login-user').value = '';
   document.getElementById('login-pass').value = '';
   updateAuthUI(false);
