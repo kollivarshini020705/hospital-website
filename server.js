@@ -43,6 +43,7 @@ const messageSchema = new mongoose.Schema({
   diagnosis: String,
   medicines: [String],
   diet: String,
+  reports: String,
   notes: String,
   time: String
 });

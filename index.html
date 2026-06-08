@@ -357,6 +357,10 @@
       <textarea id="rx-diet" placeholder="e.g. Drink plenty of fluids, avoid oily food, take light meals..."></textarea>
     </div>
     <div class="rx-form-group">
+      <label>Reports / Lab Findings</label>
+      <input type="text" id="rx-reports" placeholder="e.g. Blood test normal, X-Ray clear...">
+    </div>
+    <div class="rx-form-group">
       <label>Additional Notes / Advice</label>
       <textarea id="rx-notes" placeholder="e.g. Rest for 3 days, follow up after 5 days if fever persists..."></textarea>
     </div>
@@ -622,6 +626,7 @@ function renderMessages(convId) {
             ${msg.diagnosis ? `<div class="rx-section"><div class="rx-section-label">Diagnosis</div><div style="font-size:0.88rem;font-weight:500;color:var(--teal-800)">${msg.diagnosis}</div></div>` : ''}
             ${meds.length ? `<div class="rx-section"><div class="rx-section-label">Medicines</div>${meds.map(m=>`<div class="rx-item"><span class="rx-dot"></span>${m}</div>`).join('')}</div>` : ''}
             ${msg.diet ? `<div class="rx-section"><div class="rx-section-label">Diet & Lifestyle</div><div class="rx-item"><span class="rx-dot"></span>${msg.diet}</div></div>` : ''}
+            ${msg.reports ? `<div class="rx-section"><div class="rx-section-label">Reports / Findings</div><div class="rx-item"><span class="rx-dot"></span>${msg.reports}</div></div>` : ''}
             ${msg.notes ? `<div class="rx-footer">${msg.notes}</div>` : ''}
           </div>
           <div class="msg-meta"><span>${msg.time}</span></div>`;
@@ -673,6 +678,7 @@ async function sendMessage() {
 function openRxModal() {
   document.getElementById('rx-diagnosis').value = '';
   document.getElementById('rx-diet').value = '';
+  document.getElementById('rx-reports').value = '';
   document.getElementById('rx-notes').value = '';
   document.getElementById('med-list').innerHTML = `<div class="med-row"><input type="text" placeholder="e.g. Paracetamol 500mg – 1 tablet twice a day for 5 days"><button onclick="addMedRow(this)" title="Add more">+</button></div>`;
   document.getElementById('rx-modal').classList.add('open');
@@ -692,6 +698,7 @@ function addMedRow(btn) {
 async function sendPrescription() {
   const diagnosis = document.getElementById('rx-diagnosis').value.trim();
   const diet = document.getElementById('rx-diet').value.trim();
+  const reports = document.getElementById('rx-reports').value.trim();
   const notes = document.getElementById('rx-notes').value.trim();
   const medInputs = document.querySelectorAll('#med-list input');
   const medicines = [...medInputs].map(i => i.value.trim()).filter(Boolean);
@@ -699,7 +706,7 @@ async function sendPrescription() {
   const now = new Date();
   const time = now.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
   
-  const msgData = { conversationId: currentConv, from: currentUser, type: 'prescription', diagnosis, medicines, diet, notes, time };
+  const msgData = { conversationId: currentConv, from: currentUser, type: 'prescription', diagnosis, medicines, diet, reports, notes, time };
 
   try {
     await fetch(`${API_BASE}/messages`, {
