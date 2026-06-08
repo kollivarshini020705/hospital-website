@@ -672,52 +672,79 @@ let CONVERSATIONS = {};
 let currentUser = null;
 let currentConv = null;
 let signupRole = 'patient';
-let pollingInterval = null;
 
-const API_BASE = 'http://localhost:3000/api';
+const MockDB = {
+  load: function() {
+    return JSON.parse(localStorage.getItem('medicare_db') || '{"users":{}, "conversations":{}}');
+  },
+  save: function(data) {
+    localStorage.setItem('medicare_db', JSON.stringify(data));
+  },
+  init: function() {
+    const data = this.load();
+    if (Object.keys(data.users).length === 0) {
+      data.users['doc_sj'] = { username: 'doc_sj', password: 'password', role: 'doctor', name: 'Dr. Sarah Jenkins', initials: 'SJ', specialty: 'Cardiologist' };
+      data.users['doc_mr'] = { username: 'doc_mr', password: 'password', role: 'doctor', name: 'Dr. Michael Roberts', initials: 'MR', specialty: 'Neurologist' };
+      data.users['patient1'] = { username: 'patient1', password: 'password', role: 'patient', name: 'John Doe', initials: 'JD' };
+      data.conversations['conv1'] = { id: 'conv1', participants: ['doc_sj', 'patient1'], messages: [] };
+      data.conversations['conv2'] = { id: 'conv2', participants: ['doc_mr', 'patient1'], messages: [] };
+      this.save(data);
+    }
+  },
+  signup: function(req) {
+    const data = this.load();
+    if (data.users[req.username]) return { error: 'Username already exists.' };
+    const initials = req.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() || 'U';
+    const user = { ...req, initials };
+    data.users[req.username] = user;
+    Object.values(data.users).forEach(other => {
+      if (other.role !== req.role) {
+        const convId = 'conv_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+        data.conversations[convId] = { id: convId, participants: [req.username, other.username], messages: [] };
+      }
+    });
+    this.save(data);
+    return { user };
+  },
+  login: function(req) {
+    const data = this.load();
+    const user = data.users[req.username];
+    if (!user || user.password !== req.password) return { error: 'Invalid credentials.' };
+    return { user };
+  },
+  getUsers: function() { return this.load().users; },
+  getConversations: function(username) {
+    const data = this.load();
+    const userConvs = {};
+    Object.values(data.conversations).forEach(conv => {
+      if (conv.participants.includes(username)) userConvs[conv.id] = conv;
+    });
+    return userConvs;
+  },
+  addMessage: function(convId, msg) {
+    const data = this.load();
+    if (data.conversations[convId]) {
+      data.conversations[convId].messages.push(msg);
+      this.save(data);
+    }
+  }
+};
+MockDB.init();
 
 async function fetchInitialData() {
   if (!currentUser) return;
-  try {
-    const uRes = await fetch(`${API_BASE}/users`);
-    USERS = await uRes.json();
-    
-    const cRes = await fetch(`${API_BASE}/conversations/${currentUser}`);
-    CONVERSATIONS = await cRes.json();
-  } catch(e) {
-    console.error('Failed to fetch data', e);
+  USERS = MockDB.getUsers();
+  CONVERSATIONS = MockDB.getConversations(currentUser);
+}
+
+window.addEventListener('storage', (e) => {
+  if (e.key === 'medicare_db' && currentUser) {
+    fetchInitialData().then(() => {
+      if (currentConv) renderMessages(currentConv);
+      renderChatList();
+    });
   }
-}
-
-function startPolling() {
-  if (pollingInterval) clearInterval(pollingInterval);
-  pollingInterval = setInterval(async () => {
-    if (!currentUser) return;
-    try {
-      const cRes = await fetch(`${API_BASE}/conversations/${currentUser}`);
-      const newData = await cRes.json();
-      let hasUpdates = false;
-      
-      if (currentConv && newData[currentConv]) {
-        const oldLen = CONVERSATIONS[currentConv]?.messages?.length || 0;
-        const newLen = newData[currentConv].messages?.length || 0;
-        if (newLen > oldLen) hasUpdates = true;
-      }
-      if (!hasUpdates) {
-        for (let [id, conv] of Object.entries(newData)) {
-           const oldLen = CONVERSATIONS[id]?.messages?.length || 0;
-           if ((conv.messages?.length || 0) > oldLen) { hasUpdates = true; break; }
-        }
-      }
-
-      if (hasUpdates) {
-        CONVERSATIONS = newData;
-        if (currentConv) renderMessages(currentConv);
-        renderChatList();
-      }
-    } catch(e) {}
-  }, 3000);
-}
+});
 
 function showPage(name) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -744,34 +771,23 @@ async function doSignup() {
     return;
   }
 
-  try {
-    const res = await fetch(`${API_BASE}/signup`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: u, password: p, role: signupRole, name, specialty: spec })
-    });
-
-    const data = await res.json();
-    if (!res.ok) {
-      err.textContent = data.error || 'Signup failed';
-      err.style.display = 'block';
-      return;
-    }
-    
-    err.style.display = 'none';
-    document.getElementById('login-user').value = u;
-    document.getElementById('login-pass').value = p;
-    
-    document.getElementById('signup-name').value = '';
-    document.getElementById('signup-user').value = '';
-    document.getElementById('signup-pass').value = '';
-    document.getElementById('signup-specialty').value = '';
-    
-    doLogin();
-  } catch (error) {
-    err.textContent = 'Could not connect to server.';
+  const res = MockDB.signup({ username: u, password: p, role: signupRole, name, specialty: spec });
+  if (res.error) {
+    err.textContent = res.error;
     err.style.display = 'block';
+    return;
   }
+  
+  err.style.display = 'none';
+  document.getElementById('login-user').value = u;
+  document.getElementById('login-pass').value = p;
+  
+  document.getElementById('signup-name').value = '';
+  document.getElementById('signup-user').value = '';
+  document.getElementById('signup-pass').value = '';
+  document.getElementById('signup-specialty').value = '';
+  
+  doLogin();
 }
 
 async function doLogin() {
@@ -779,31 +795,17 @@ async function doLogin() {
   const p = document.getElementById('login-pass').value.trim();
   const err = document.getElementById('login-error');
   
-  try {
-    const res = await fetch(`${API_BASE}/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: u, password: p })
-    });
-
-    const data = await res.json();
+  const res = MockDB.login({ username: u, password: p });
+  if (!res.error) {
+    err.style.display = 'none';
+    currentUser = u;
     
-    if (res.ok) {
-      err.style.display = 'none';
-      currentUser = u;
-      USERS[u] = data.user;
-      
-      await fetchInitialData();
-      setupPortal();
-      updateAuthUI(true);
-      showPage('portal');
-      startPolling();
-    } else {
-      err.textContent = data.error || 'Invalid credentials.';
-      err.style.display = 'block';
-    }
-  } catch (error) {
-    err.textContent = 'Could not connect to server. Is Node.js running?';
+    await fetchInitialData();
+    setupPortal();
+    updateAuthUI(true);
+    showPage('portal');
+  } else {
+    err.textContent = res.error || 'Invalid credentials.';
     err.style.display = 'block';
   }
 }
@@ -825,8 +827,6 @@ function updateAuthUI(isLoggedIn) {
 function doLogout() {
   currentUser = null;
   currentConv = null;
-  if (pollingInterval) clearInterval(pollingInterval);
-  pollingInterval = null;
   document.getElementById('login-user').value = '';
   document.getElementById('login-pass').value = '';
   updateAuthUI(false);
@@ -987,20 +987,11 @@ async function sendMessage() {
   
   const msgData = { conversationId: currentConv, from: currentUser, type: 'text', text, time };
   
-  try {
-    await fetch(`${API_BASE}/messages`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(msgData)
-    });
-    
-    await fetchInitialData();
-    input.value = '';
-    renderMessages(currentConv);
-    renderChatList();
-  } catch(e) {
-    console.error('Error sending message', e);
-  }
+  MockDB.addMessage(currentConv, msgData);
+  await fetchInitialData();
+  input.value = '';
+  renderMessages(currentConv);
+  renderChatList();
 }
 
 function openRxModal() {
@@ -1036,20 +1027,11 @@ async function sendPrescription() {
   
   const msgData = { conversationId: currentConv, from: currentUser, type: 'prescription', diagnosis, medicines, diet, reports, notes, time };
 
-  try {
-    await fetch(`${API_BASE}/messages`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(msgData)
-    });
-    
-    await fetchInitialData();
-    closeRxModal();
-    renderMessages(currentConv);
-    renderChatList();
-  } catch (e) {
-    console.error('Error sending prescription', e);
-  }
+  MockDB.addMessage(currentConv, msgData);
+  await fetchInitialData();
+  closeRxModal();
+  renderMessages(currentConv);
+  renderChatList();
 }
 </script>
 </body>
