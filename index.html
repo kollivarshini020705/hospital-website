@@ -266,7 +266,6 @@
     <a href="#" onclick="showPage('contact')">Contact</a>
     <a href="#" id="nav-login-link" onclick="showPage('login')" style="font-weight:600; color:var(--teal-600);">Sign In / Sign Up</a>
     <a href="#" id="nav-portal-link" onclick="showPage('portal')" style="font-weight:600; color:var(--teal-600); display:none;">My Portal</a>
-    <a href="#" id="nav-logout-link" onclick="doLogout()" style="font-weight:600; color:var(--coral-600); display:none;">Sign Out</a>
   </div>
 </nav>
 
@@ -801,13 +800,11 @@ function updateAuthUI(isLoggedIn) {
   if (isLoggedIn) {
     document.getElementById('nav-login-link').style.display = 'none';
     document.getElementById('nav-portal-link').style.display = 'inline';
-    document.getElementById('nav-logout-link').style.display = 'inline';
     document.getElementById('hero-auth-btns').style.display = 'none';
     document.getElementById('hero-portal-btn').style.display = 'flex';
   } else {
     document.getElementById('nav-login-link').style.display = 'inline';
     document.getElementById('nav-portal-link').style.display = 'none';
-    document.getElementById('nav-logout-link').style.display = 'none';
     document.getElementById('hero-auth-btns').style.display = 'flex';
     document.getElementById('hero-portal-btn').style.display = 'none';
   }
