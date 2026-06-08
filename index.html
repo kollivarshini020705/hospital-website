@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MediCare Hospital — Doctor-Patient Portal</title>
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --teal-50: #E1F5EE; --teal-100: #9FE1CB; --teal-400: #1D9E75; --teal-600: #0F6E56; --teal-800: #085041; --teal-900: #04342C;
+    --blue-50: #E6F1FB; --blue-100: #B5D4F4; --blue-400: #378ADD; --blue-600: #185FA5; --blue-800: #0C447C;
+    --gray-50: #F1EFE8; --gray-100: #D3D1C7; --gray-200: #B4B2A9; --gray-400: #888780; --gray-600: #5F5E5A; --gray-800: #444441;
+    --coral-50: #FAECE7; --coral-400: #D85A30; --coral-600: #993C1D; --coral-800: #712B13;
+    --purple-50: #EEEDFE; --purple-400: #7F77DD; --purple-600: #534AB7; --purple-800: #3C3489;
+    --green-50: #EAF3DE; --green-400: #639922; --green-600: #3B6D11; --green-800: #27500A;
+    --amber-50: #FAEEDA; --amber-400: #BA7517; --amber-600: #854F0B; --amber-800: #633806;
+    --bg: #ffffff; --bg-sec: #f8f7f4; --text: #1a1a18; --text-sec: #5F5E5A; --border: rgba(0,0,0,0.1);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  /* NAV */
+  nav { background: #fff; border-bottom: 1px solid var(--border); padding: 0 2rem; display: flex; align-items: center; justify-content: space-between; height: 64px; position: sticky; top: 0; z-index: 100; }
+  .logo { font-family: 'Lora', serif; font-size: 1.3rem; color: var(--teal-600); display: flex; align-items: center; gap: 8px; }
+  .logo-icon { width: 32px; height: 32px; background: var(--teal-400); border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+  .logo-icon svg { width: 18px; height: 18px; fill: white; }
+  .nav-links { display: flex; gap: 1.5rem; align-items: center; }
+  .nav-links a { color: var(--text-sec); text-decoration: none; font-size: 0.9rem; transition: color 0.2s; }
+  .nav-links a:hover { color: var(--teal-600); }
+  .btn { padding: 8px 20px; border-radius: 8px; border: none; cursor: pointer; font-family: 'DM Sans', sans-serif; font-size: 0.9rem; font-weight: 500; transition: all 0.2s; }
+  .btn-primary { background: var(--teal-400); color: white; }
+  .btn-primary:hover { background: var(--teal-600); }
+  .btn-outline { background: transparent; border: 1px solid var(--teal-400); color: var(--teal-600); }
+  .btn-outline:hover { background: var(--teal-50); }
+  .btn-sm { padding: 6px 14px; font-size: 0.82rem; }
+  .btn-danger { background: var(--coral-400); color: white; }
+  .btn-danger:hover { background: var(--coral-600); }
+
+  /* PAGES */
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* HERO */
+  .hero { background: linear-gradient(135deg, var(--teal-50) 0%, #fff 60%); padding: 5rem 2rem 4rem; text-align: center; }
+  .hero h1 { font-family: 'Lora', serif; font-size: 3rem; color: var(--teal-900); margin-bottom: 1rem; line-height: 1.2; }
+  .hero p { font-size: 1.1rem; color: var(--text-sec); max-width: 520px; margin: 0 auto 2.5rem; line-height: 1.7; }
+  .hero-btns { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+  .hero-btns .btn { padding: 12px 28px; font-size: 1rem; border-radius: 10px; }
+
+  /* FEATURES */
+  .features { padding: 4rem 2rem; background: var(--bg-sec); }
+  .features h2 { font-family: 'Lora', serif; text-align: center; font-size: 1.8rem; color: var(--teal-800); margin-bottom: 2.5rem; }
+  .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.5rem; max-width: 900px; margin: 0 auto; }
+  .feature-card { background: white; border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; }
+  .feature-icon { width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-bottom: 1rem; font-size: 1.3rem; }
+  .fi-teal { background: var(--teal-50); color: var(--teal-600); }
+  .fi-blue { background: var(--blue-50); color: var(--blue-600); }
+  .fi-purple { background: var(--purple-50); color: var(--purple-600); }
+  .fi-amber { background: var(--amber-50); color: var(--amber-600); }
+  .feature-card h3 { font-size: 1rem; font-weight: 600; margin-bottom: 0.5rem; color: var(--text); }
+  .feature-card p { font-size: 0.88rem; color: var(--text-sec); line-height: 1.6; }
+
+  /* LOGIN */
+  .login-wrap { min-height: 90vh; display: flex; align-items: center; justify-content: center; padding: 2rem; background: var(--bg-sec); }
+  .login-card { background: white; border: 1px solid var(--border); border-radius: 16px; padding: 2.5rem; width: 100%; max-width: 420px; }
+  .login-card h2 { font-family: 'Lora', serif; font-size: 1.6rem; margin-bottom: 0.4rem; color: var(--text); }
+  .login-card .sub { font-size: 0.9rem; color: var(--text-sec); margin-bottom: 1.8rem; }
+  .role-tabs { display: flex; gap: 8px; margin-bottom: 1.5rem; }
+  .role-tab { flex: 1; padding: 8px; border: 1px solid var(--border); border-radius: 8px; background: transparent; cursor: pointer; font-family: 'DM Sans', sans-serif; font-size: 0.88rem; color: var(--text-sec); transition: all 0.2s; }
+  .role-tab.active { background: var(--teal-50); border-color: var(--teal-400); color: var(--teal-600); font-weight: 500; }
+  .form-group { margin-bottom: 1.1rem; }
+  .form-group label { display: block; font-size: 0.85rem; font-weight: 500; color: var(--text-sec); margin-bottom: 6px; }
+  .form-group input, .form-group select { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 0.9rem; color: var(--text); background: var(--bg); transition: border-color 0.2s; }
+  .form-group input:focus, .form-group select:focus { outline: none; border-color: var(--teal-400); }
+  .demo-hint { font-size: 0.78rem; color: var(--text-sec); background: var(--gray-50); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; margin-bottom: 1.2rem; line-height: 1.6; }
+  .demo-hint strong { color: var(--teal-600); }
+  .login-card .btn { width: 100%; padding: 11px; font-size: 0.95rem; border-radius: 8px; }
+
+  /* PORTAL LAYOUT */
+  .portal { display: grid; grid-template-columns: 280px 1fr; height: calc(100vh - 64px); }
+  .sidebar { border-right: 1px solid var(--border); background: var(--bg-sec); display: flex; flex-direction: column; overflow: hidden; }
+  .sidebar-header { padding: 1.2rem 1rem; border-bottom: 1px solid var(--border); }
+  .sidebar-header h3 { font-size: 0.82rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-sec); margin-bottom: 0.8rem; }
+  .user-badge { display: flex; align-items: center; gap: 10px; padding: 10px; border-radius: 10px; background: white; border: 1px solid var(--border); }
+  .avatar { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 0.85rem; flex-shrink: 0; }
+  .av-teal { background: var(--teal-50); color: var(--teal-600); }
+  .av-blue { background: var(--blue-50); color: var(--blue-600); }
+  .av-purple { background: var(--purple-50); color: var(--purple-600); }
+  .user-badge-info { flex: 1; min-width: 0; }
+  .user-badge-info strong { font-size: 0.88rem; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .user-badge-info span { font-size: 0.75rem; color: var(--text-sec); }
+  .badge-role { font-size: 0.7rem; padding: 2px 8px; border-radius: 20px; font-weight: 500; }
+  .role-doctor { background: var(--teal-50); color: var(--teal-600); }
+  .role-patient { background: var(--blue-50); color: var(--blue-600); }
+
+  .chat-list { flex: 1; overflow-y: auto; padding: 0.5rem; }
+  .chat-list h4 { font-size: 0.78rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-sec); padding: 8px 8px 4px; }
+  .chat-item { padding: 10px 12px; border-radius: 10px; cursor: pointer; margin-bottom: 4px; transition: background 0.15s; border: 1px solid transparent; }
+  .chat-item:hover { background: white; border-color: var(--border); }
+  .chat-item.active { background: white; border-color: var(--teal-100); }
+  .ci-top { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+  .ci-name { font-size: 0.88rem; font-weight: 500; flex: 1; }
+  .ci-time { font-size: 0.72rem; color: var(--text-sec); }
+  .ci-preview { font-size: 0.78rem; color: var(--text-sec); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .unread-dot { width: 8px; height: 8px; background: var(--teal-400); border-radius: 50%; flex-shrink: 0; }
+
+  .sidebar-footer { padding: 0.8rem; border-top: 1px solid var(--border); }
+  .sidebar-footer button { width: 100%; }
+
+  /* CHAT AREA */
+  .chat-area { display: flex; flex-direction: column; height: 100%; background: var(--bg); }
+  .chat-header { padding: 1rem 1.5rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; background: white; }
+  .chat-header-info h3 { font-size: 1rem; font-weight: 600; }
+  .chat-header-info p { font-size: 0.8rem; color: var(--text-sec); }
+  .online-dot { width: 9px; height: 9px; background: #22c55e; border-radius: 50%; border: 2px solid white; margin-left: auto; }
+
+  .messages { flex: 1; overflow-y: auto; padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem; background: var(--bg-sec); }
+  .msg { max-width: 70%; display: flex; flex-direction: column; gap: 4px; }
+  .msg.sent { align-self: flex-end; align-items: flex-end; }
+  .msg.received { align-self: flex-start; align-items: flex-start; }
+  .msg-bubble { padding: 10px 14px; border-radius: 16px; font-size: 0.9rem; line-height: 1.55; }
+  .msg.sent .msg-bubble { background: var(--teal-400); color: white; border-bottom-right-radius: 4px; }
+  .msg.received .msg-bubble { background: white; border: 1px solid var(--border); border-bottom-left-radius: 4px; color: var(--text); }
+  .msg-meta { font-size: 0.72rem; color: var(--text-sec); display: flex; align-items: center; gap: 4px; }
+  .msg-sender { font-weight: 500; }
+
+  /* PRESCRIPTION CARD */
+  .rx-card { background: white; border: 1px solid var(--teal-100); border-left: 4px solid var(--teal-400); border-radius: 12px; padding: 1rem 1.2rem; max-width: 400px; }
+  .rx-header { display: flex; align-items: center; gap: 8px; margin-bottom: 0.8rem; }
+  .rx-icon { font-size: 1.1rem; }
+  .rx-title { font-size: 0.88rem; font-weight: 600; color: var(--teal-800); }
+  .rx-subtitle { font-size: 0.75rem; color: var(--teal-600); }
+  .rx-section { margin-bottom: 0.8rem; }
+  .rx-section-label { font-size: 0.73rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-sec); margin-bottom: 4px; }
+  .rx-item { font-size: 0.83rem; color: var(--text); padding: 5px 0; border-bottom: 1px solid var(--gray-50); display: flex; align-items: baseline; gap: 6px; }
+  .rx-item:last-child { border-bottom: none; }
+  .rx-dot { width: 5px; height: 5px; background: var(--teal-400); border-radius: 50%; flex-shrink: 0; margin-top: 6px; }
+  .rx-footer { font-size: 0.75rem; color: var(--text-sec); margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid var(--border); font-style: italic; }
+
+  /* INPUT */
+  .chat-input-area { padding: 1rem 1.5rem; border-top: 1px solid var(--border); background: white; }
+  .input-row { display: flex; gap: 10px; align-items: flex-end; }
+  .input-row textarea { flex: 1; padding: 10px 14px; border: 1px solid var(--border); border-radius: 12px; font-family: 'DM Sans', sans-serif; font-size: 0.9rem; resize: none; max-height: 120px; min-height: 42px; line-height: 1.5; color: var(--text); }
+  .input-row textarea:focus { outline: none; border-color: var(--teal-400); }
+  .send-btn { width: 42px; height: 42px; border-radius: 50%; background: var(--teal-400); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s; flex-shrink: 0; }
+  .send-btn:hover { background: var(--teal-600); }
+  .send-btn svg { width: 18px; height: 18px; fill: white; }
+  .input-hints { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+  .hint-chip { font-size: 0.75rem; padding: 4px 10px; border: 1px solid var(--border); border-radius: 20px; background: var(--bg-sec); color: var(--text-sec); cursor: pointer; transition: all 0.15s; }
+  .hint-chip:hover { border-color: var(--teal-400); color: var(--teal-600); background: var(--teal-50); }
+
+  /* PRESCRIPTION MODAL */
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 200; align-items: center; justify-content: center; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: white; border-radius: 16px; padding: 1.8rem; width: 90%; max-width: 500px; max-height: 90vh; overflow-y: auto; }
+  .modal h3 { font-family: 'Lora', serif; font-size: 1.3rem; margin-bottom: 1.2rem; color: var(--teal-800); }
+  .rx-form-group { margin-bottom: 1rem; }
+  .rx-form-group label { display: block; font-size: 0.83rem; font-weight: 500; color: var(--text-sec); margin-bottom: 5px; }
+  .rx-form-group input, .rx-form-group textarea { width: 100%; padding: 9px 12px; border: 1px solid var(--border); border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 0.88rem; color: var(--text); }
+  .rx-form-group textarea { resize: vertical; min-height: 80px; }
+  .rx-form-group input:focus, .rx-form-group textarea:focus { outline: none; border-color: var(--teal-400); }
+  .med-row { display: flex; gap: 8px; margin-bottom: 6px; }
+  .med-row input { flex: 1; }
+  .med-row button { padding: 6px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--gray-50); cursor: pointer; font-size: 1rem; }
+  .modal-footer { display: flex; gap: 10px; justify-content: flex-end; margin-top: 1.2rem; }
+
+  /* EMPTY STATE */
+  .empty-chat { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--text-sec); gap: 0.8rem; }
+  .empty-chat svg { width: 56px; height: 56px; opacity: 0.25; }
+  .empty-chat p { font-size: 0.9rem; }
+
+  /* SYSTEM MSG */
+  .sys-msg { text-align: center; font-size: 0.75rem; color: var(--text-sec); padding: 4px 12px; background: var(--gray-50); border-radius: 20px; align-self: center; }
+
+  @media (max-width: 680px) {
+    .portal { grid-template-columns: 1fr; }
+    .sidebar { display: none; }
+    .hero h1 { font-size: 2rem; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="logo">
+    <div class="logo-icon"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/><path d="M11 6h2v2h-2zm0 10h2v2h-2z" opacity="0"/><rect x="11" y="6" width="2" height="12" rx="1"/><rect x="6" y="11" width="12" height="2" rx="1"/></svg></div>
+    MediCare Hospital
+  </div>
+  <div class="nav-links">
+    <a href="#" onclick="showPage('home')">Home</a>
+    <a href="#">Doctors</a>
+    <a href="#">Services</a>
+    <a href="#">Contact</a>
+    <a href="#" onclick="showPage('login')" style="font-weight:600; color:var(--teal-600);">Sign In / Sign Up</a>
+  </div>
+</nav>
+
+<!-- HOME PAGE -->
+<div id="page-home" class="page active">
+  <div class="hero">
+    <h1>Your Health,<br>Our Priority</h1>
+    <p>Connect with experienced doctors from the comfort of your home. Get prescriptions, diet plans, and expert medical advice instantly.</p>
+    <div class="hero-btns" style="flex-direction: column; align-items: center; gap: 0.8rem;">
+      <button class="btn btn-primary" style="width: 200px;" onclick="showPage('login')">Sign In</button>
+      <span style="font-size: 0.9rem; color: var(--text-sec);">Don't have an account? <a href="#" onclick="showPage('signup')" style="color: var(--teal-600); text-decoration: none; font-weight: 600;">Create Account</a></span>
+    </div>
+  </div>
+  <div class="features">
+    <h2>Why Choose MediCare?</h2>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon fi-teal"></div>
+        <h3>Live Doctor Chat</h3>
+        <p>Consult certified doctors in real time, describe your symptoms and get immediate guidance.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon fi-blue"></div>
+        <h3>Digital Prescriptions</h3>
+        <p>Receive structured prescriptions with medicine names, dosage, and duration directly in chat.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon fi-purple"></div>
+        <h3>Diet & Lifestyle Plans</h3>
+        <p>Get personalised diet recommendations based on your health condition and treatment.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon fi-amber"></div>
+        <h3>Secure & Private</h3>
+        <p>All conversations are confidential. Your health information is safe with us.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- LOGIN PAGE -->
+<div id="page-login" class="page">
+  <div class="login-wrap">
+    <div class="login-card">
+      <h2>Welcome back</h2>
+      <p class="sub">Sign in to your MediCare portal</p>
+      <div class="form-group">
+        <label>Username</label>
+        <input type="text" id="login-user" placeholder="Enter username" />
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="login-pass" placeholder="Enter password" />
+      </div>
+      <p id="login-error" style="color:var(--coral-600);font-size:0.82rem;margin-bottom:0.8rem;display:none;">Invalid credentials.</p>
+      <button class="btn btn-primary" onclick="doLogin()">Sign In</button>
+      <p style="text-align:center; font-size:0.85rem; margin-top:1rem; color:var(--text-sec);">
+        Don't have an account? <a href="#" onclick="showPage('signup')" style="color:var(--teal-600); text-decoration:none; font-weight:500;">Sign Up</a>
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- SIGNUP PAGE -->
+<div id="page-signup" class="page">
+  <div class="login-wrap">
+    <div class="login-card">
+      <h2>Create Account</h2>
+      <p class="sub">Join MediCare to connect with doctors and patients</p>
+      <div class="role-tabs">
+        <button class="role-tab active" id="signup-tab-patient" onclick="switchSignupRole('patient')">Patient</button>
+        <button class="role-tab" id="signup-tab-doctor" onclick="switchSignupRole('doctor')">Doctor</button>
+      </div>
+      <div class="form-group">
+        <label>Full Name</label>
+        <input type="text" id="signup-name" placeholder="e.g. John Doe" />
+      </div>
+      <div class="form-group">
+        <label>Username</label>
+        <input type="text" id="signup-user" placeholder="Choose a username" />
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="signup-pass" placeholder="Create a password" />
+      </div>
+      <div class="form-group" id="signup-specialty-group" style="display:none;">
+        <label>Specialty</label>
+        <input type="text" id="signup-specialty" placeholder="e.g. Cardiologist, General Physician" />
+      </div>
+      <p id="signup-error" style="color:var(--coral-600);font-size:0.82rem;margin-bottom:0.8rem;display:none;">Please fill all required fields.</p>
+      <button class="btn btn-primary" onclick="doSignup()">Sign Up</button>
+      <p style="text-align:center; font-size:0.85rem; margin-top:1rem; color:var(--text-sec);">
+        Already have an account? <a href="#" onclick="showPage('login')" style="color:var(--teal-600); text-decoration:none; font-weight:500;">Sign In</a>
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- PORTAL PAGE -->
+<div id="page-portal" class="page">
+  <div class="portal">
+    <div class="sidebar">
+      <div class="sidebar-header">
+        <h3>Portal</h3>
+        <div class="user-badge">
+          <div class="avatar" id="sidebar-avatar"></div>
+          <div class="user-badge-info">
+            <strong id="sidebar-name"></strong>
+            <span id="sidebar-role-badge" class="badge-role"></span>
+          </div>
+        </div>
+      </div>
+      <div class="chat-list" id="chat-list">
+        <h4 id="chat-list-label">Consultations</h4>
+      </div>
+      <div class="sidebar-footer">
+        <button class="btn btn-danger btn-sm" onclick="doLogout()">Sign Out</button>
+      </div>
+    </div>
+    <div class="chat-area" id="chat-area">
+      <div class="empty-chat" id="empty-chat">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+        <p>Select a conversation to start</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PRESCRIPTION MODAL (Doctor only) -->
+<div class="modal-overlay" id="rx-modal">
+  <div class="modal">
+    <h3>Write Prescription</h3>
+    <div class="rx-form-group">
+      <label>Diagnosis / Condition</label>
+      <input type="text" id="rx-diagnosis" placeholder="e.g. Viral fever, Hypertension...">
+    </div>
+    <div class="rx-form-group">
+      <label>Medicines</label>
+      <div id="med-list">
+        <div class="med-row">
+          <input type="text" placeholder="e.g. Paracetamol 500mg – 1 tablet twice a day for 5 days">
+          <button onclick="addMedRow(this)" title="Add more">+</button>
+        </div>
+      </div>
+    </div>
+    <div class="rx-form-group">
+      <label>Diet Recommendations</label>
+      <textarea id="rx-diet" placeholder="e.g. Drink plenty of fluids, avoid oily food, take light meals..."></textarea>
+    </div>
+    <div class="rx-form-group">
+      <label>Additional Notes / Advice</label>
+      <textarea id="rx-notes" placeholder="e.g. Rest for 3 days, follow up after 5 days if fever persists..."></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeRxModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="sendPrescription()">Send Prescription</button>
+    </div>
+  </div>
+</div<script>
+let USERS = {};
+let CONVERSATIONS = {};
+let currentUser = null;
+let currentConv = null;
+let signupRole = 'patient';
+
+const API_BASE = '/api';
+
+async function fetchInitialData() {
+  if (!currentUser) return;
+  try {
+    const uRes = await fetch(`${API_BASE}/users`);
+    USERS = await uRes.json();
+    
+    const cRes = await fetch(`${API_BASE}/conversations/${currentUser}`);
+    CONVERSATIONS = await cRes.json();
+  } catch(e) {
+    console.error('Failed to fetch data', e);
+  }
+}
+
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+}
+
+function switchSignupRole(role) {
+  signupRole = role;
+  document.getElementById('signup-tab-patient').classList.toggle('active', role === 'patient');
+  document.getElementById('signup-tab-doctor').classList.toggle('active', role === 'doctor');
+  document.getElementById('signup-specialty-group').style.display = role === 'doctor' ? 'block' : 'none';
+}
+
+async function doSignup() {
+  const name = document.getElementById('signup-name').value.trim();
+  const u = document.getElementById('signup-user').value.trim();
+  const p = document.getElementById('signup-pass').value.trim();
+  const spec = document.getElementById('signup-specialty').value.trim();
+  const err = document.getElementById('signup-error');
+
+  if (!name || !u || !p || (signupRole === 'doctor' && !spec)) {
+    err.textContent = 'Please fill all required fields.';
+    err.style.display = 'block';
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}/signup`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: u, password: p, role: signupRole, name, specialty: spec })
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      err.textContent = data.error || 'Signup failed';
+      err.style.display = 'block';
+      return;
+    }
+    
+    err.style.display = 'none';
+    document.getElementById('login-user').value = u;
+    document.getElementById('login-pass').value = p;
+    
+    document.getElementById('signup-name').value = '';
+    document.getElementById('signup-user').value = '';
+    document.getElementById('signup-pass').value = '';
+    document.getElementById('signup-specialty').value = '';
+    
+    doLogin();
+  } catch (error) {
+    err.textContent = 'Could not connect to server.';
+    err.style.display = 'block';
+  }
+}
+
+async function doLogin() {
+  const u = document.getElementById('login-user').value.trim();
+  const p = document.getElementById('login-pass').value.trim();
+  const err = document.getElementById('login-error');
+  
+  try {
+    const res = await fetch(`${API_BASE}/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: u, password: p })
+    });
+
+    const data = await res.json();
+    
+    if (res.ok) {
+      err.style.display = 'none';
+      currentUser = u;
+      USERS[u] = data.user;
+      
+      await fetchInitialData();
+      setupPortal();
+      showPage('portal');
+    } else {
+      err.textContent = data.error || 'Invalid credentials.';
+      err.style.display = 'block';
+    }
+  } catch (error) {
+    err.textContent = 'Could not connect to server. Is Node.js running?';
+    err.style.display = 'block';
+  }
+}
+
+function doLogout() {
+  currentUser = null;
+  currentConv = null;
+  document.getElementById('login-user').value = '';
+  document.getElementById('login-pass').value = '';
+  showPage('home');
+}
+
+function setupPortal() {
+  const user = USERS[currentUser];
+  const av = document.getElementById('sidebar-avatar');
+  av.textContent = user.initials;
+  av.className = 'avatar ' + (user.role === 'doctor' ? 'av-teal' : 'av-blue');
+  document.getElementById('sidebar-name').textContent = user.name;
+  const rb = document.getElementById('sidebar-role-badge');
+  rb.textContent = user.role === 'doctor' ? (user.specialty || 'Doctor') : 'Patient';
+  rb.className = 'badge-role ' + (user.role === 'doctor' ? 'role-doctor' : 'role-patient');
+
+  document.getElementById('chat-list-label').textContent = user.role === 'doctor' ? 'My Patients' : 'My Doctors';
+  renderChatList();
+  document.getElementById('empty-chat').style.display = 'flex';
+  const old = document.getElementById('active-chat');
+  if(old) old.remove();
+}
+
+function renderChatList() {
+  const list = document.getElementById('chat-list');
+  const label = list.querySelector('h4');
+  list.innerHTML = '';
+  list.appendChild(label);
+
+  const myConvs = Object.entries(CONVERSATIONS);
+  myConvs.forEach(([id, conv]) => {
+    const otherId = conv.participants.find(p => p !== currentUser);
+    const other = USERS[otherId];
+    if(!other) return; 
+    const lastMsg = conv.messages && conv.messages.length > 0 ? conv.messages[conv.messages.length - 1] : null;
+    const preview = lastMsg ? (lastMsg.type === 'prescription' ? 'Prescription sent' : lastMsg.text) : 'Start a conversation';
+    const el = document.createElement('div');
+    el.className = 'chat-item' + (currentConv === id ? ' active' : '');
+    el.onclick = () => openConversation(id);
+    el.innerHTML = `
+      <div class="ci-top">
+        <div class="avatar av-${other.role === 'doctor' ? 'teal' : 'blue'}" style="width:28px;height:28px;font-size:0.72rem">${other.initials}</div>
+        <span class="ci-name">${other.name}</span>
+        <span class="ci-time">${lastMsg ? lastMsg.time : ''}</span>
+      </div>
+      <div class="ci-preview">${preview.substring(0, 55)}${preview.length > 55 ? '…' : ''}</div>`;
+    list.appendChild(el);
+  });
+}
+
+function openConversation(convId) {
+  currentConv = convId;
+  document.querySelectorAll('.chat-item').forEach(el => el.classList.remove('active'));
+  document.querySelector(`.chat-item[onclick*="${convId}"]`)?.classList.add('active');
+
+  const conv = CONVERSATIONS[convId];
+  const otherId = conv.participants.find(p => p !== currentUser);
+  const other = USERS[otherId];
+  document.getElementById('empty-chat').style.display = 'none';
+  const oldChat = document.getElementById('active-chat');
+  if(oldChat) oldChat.remove();
+
+  const isDoctor = USERS[currentUser].role === 'doctor';
+  const area = document.getElementById('chat-area');
+  const chatDiv = document.createElement('div');
+  chatDiv.id = 'active-chat';
+  chatDiv.style.cssText = 'display:flex;flex-direction:column;height:100%;';
+  chatDiv.innerHTML = `
+    <div class="chat-header">
+      <div class="avatar ${other.role === 'doctor' ? 'av-teal' : 'av-blue'}">${other.initials}</div>
+      <div class="chat-header-info">
+        <h3>${other.name}</h3>
+        <p>${other.role === 'doctor' ? other.specialty : 'Patient'} &nbsp;·&nbsp; Online</p>
+      </div>
+      <span class="online-dot"></span>
+      ${isDoctor ? `<button class="btn btn-primary btn-sm" style="margin-left:12px" onclick="openRxModal()">Write Prescription</button>` : ''}
+    </div>
+    <div class="messages" id="msgs-${convId}"></div>
+    <div class="chat-input-area">
+      <div class="input-row">
+        <textarea id="msg-input" placeholder="Type your message…" rows="1" onkeydown="handleKey(event)"></textarea>
+        <button class="send-btn" onclick="sendMessage()">
+          <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+        </button>
+      </div>
+      <div class="input-hints">
+        ${isDoctor
+          ? `<span class="hint-chip" onclick="insertHint('Your reports look normal.')">Reports look normal</span>
+             <span class="hint-chip" onclick="insertHint('Please take rest and drink plenty of fluids.')">Rest & fluids</span>
+             <span class="hint-chip" onclick="insertHint('I will send you a prescription shortly.')">Prescription coming</span>`
+          : `<span class="hint-chip" onclick="insertHint('I have a fever and body ache since yesterday.')">Fever & body ache</span>
+             <span class="hint-chip" onclick="insertHint('I have severe stomach pain after eating.')">Stomach pain</span>
+             <span class="hint-chip" onclick="insertHint('Thank you Doctor, I will follow your advice.')">Thank you</span>`
+        }
+      </div>
+    </div>`;
+  area.appendChild(chatDiv);
+  renderMessages(convId);
+}
+
+function renderMessages(convId) {
+  const conv = CONVERSATIONS[convId];
+  const container = document.getElementById('msgs-' + convId);
+  if(!container) return;
+  container.innerHTML = '';
+  const sys = document.createElement('div');
+  sys.className = 'sys-msg';
+  sys.textContent = 'Conversation is private and secure';
+  container.appendChild(sys);
+
+  if (conv.messages) {
+    conv.messages.forEach(msg => {
+      const isSent = msg.from === currentUser;
+      const sender = USERS[msg.from] || { name: 'Unknown' };
+      const el = document.createElement('div');
+      el.className = 'msg ' + (isSent ? 'sent' : 'received');
+      if(msg.type === 'prescription') {
+        const meds = msg.medicines || [];
+        el.innerHTML = `
+          <div class="rx-card">
+            <div class="rx-header">
+              <span class="rx-icon"></span>
+              <div><div class="rx-title">Medical Prescription</div><div class="rx-subtitle">by ${sender.name}</div></div>
+            </div>
+            ${msg.diagnosis ? `<div class="rx-section"><div class="rx-section-label">Diagnosis</div><div style="font-size:0.88rem;font-weight:500;color:var(--teal-800)">${msg.diagnosis}</div></div>` : ''}
+            ${meds.length ? `<div class="rx-section"><div class="rx-section-label">Medicines</div>${meds.map(m=>`<div class="rx-item"><span class="rx-dot"></span>${m}</div>`).join('')}</div>` : ''}
+            ${msg.diet ? `<div class="rx-section"><div class="rx-section-label">Diet & Lifestyle</div><div class="rx-item"><span class="rx-dot"></span>${msg.diet}</div></div>` : ''}
+            ${msg.notes ? `<div class="rx-footer">${msg.notes}</div>` : ''}
+          </div>
+          <div class="msg-meta"><span>${msg.time}</span></div>`;
+      } else {
+        el.innerHTML = `
+          <div class="msg-bubble">${msg.text.replace(/\n/g,'<br>')}</div>
+          <div class="msg-meta">${!isSent ? `<span class="msg-sender">${sender.name.split(' ')[0]}</span> · ` : ''}<span>${msg.time}</span></div>`;
+      }
+      container.appendChild(el);
+    });
+  }
+  container.scrollTop = container.scrollHeight;
+}
+
+function handleKey(e) {
+  if(e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+}
+
+function insertHint(text) {
+  document.getElementById('msg-input').value = text;
+  document.getElementById('msg-input').focus();
+}
+
+async function sendMessage() {
+  const input = document.getElementById('msg-input');
+  const text = input.value.trim();
+  if(!text || !currentConv) return;
+  const now = new Date();
+  const time = now.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+  
+  const msgData = { conversationId: currentConv, from: currentUser, type: 'text', text, time };
+  
+  try {
+    await fetch(`${API_BASE}/messages`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(msgData)
+    });
+    
+    await fetchInitialData();
+    input.value = '';
+    renderMessages(currentConv);
+    renderChatList();
+  } catch(e) {
+    console.error('Error sending message', e);
+  }
+}
+
+function openRxModal() {
+  document.getElementById('rx-diagnosis').value = '';
+  document.getElementById('rx-diet').value = '';
+  document.getElementById('rx-notes').value = '';
+  document.getElementById('med-list').innerHTML = `<div class="med-row"><input type="text" placeholder="e.g. Paracetamol 500mg – 1 tablet twice a day for 5 days"><button onclick="addMedRow(this)" title="Add more">+</button></div>`;
+  document.getElementById('rx-modal').classList.add('open');
+}
+
+function closeRxModal() {
+  document.getElementById('rx-modal').classList.remove('open');
+}
+
+function addMedRow(btn) {
+  const row = document.createElement('div');
+  row.className = 'med-row';
+  row.innerHTML = `<input type="text" placeholder="Medicine name, dosage, duration"><button onclick="this.parentElement.remove()" title="Remove">×</button>`;
+  btn.parentElement.parentElement.appendChild(row);
+}
+
+async function sendPrescription() {
+  const diagnosis = document.getElementById('rx-diagnosis').value.trim();
+  const diet = document.getElementById('rx-diet').value.trim();
+  const notes = document.getElementById('rx-notes').value.trim();
+  const medInputs = document.querySelectorAll('#med-list input');
+  const medicines = [...medInputs].map(i => i.value.trim()).filter(Boolean);
+  if(!diagnosis && !medicines.length) { alert('Please add at least a diagnosis or medicine.'); return; }
+  const now = new Date();
+  const time = now.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+  
+  const msgData = { conversationId: currentConv, from: currentUser, type: 'prescription', diagnosis, medicines, diet, notes, time };
+
+  try {
+    await fetch(`${API_BASE}/messages`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(msgData)
+    });
+    
+    await fetchInitialData();
+    closeRxModal();
+    renderMessages(currentConv);
+    renderChatList();
+  } catch (e) {
+    console.error('Error sending prescription', e);
+  }
+}
+</script>
+</body>
+</html>
