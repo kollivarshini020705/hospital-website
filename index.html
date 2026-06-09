@@ -420,6 +420,7 @@
             <li>Cardiovascular health and blood pressure monitoring</li>
             <li>Personalized vaccination and immunization schedules</li>
           </ul>
+          <button class="btn btn-sm" style="margin-top:1rem; background:var(--teal-50); color:var(--teal-700); border:1px solid var(--teal-200); width:100%;" onclick="openBookingModal('General Checkups & Preventive Care')">Book Service Slot</button>
         </div>
       </div>
       <div class="service-item">
@@ -432,6 +433,7 @@
             <li>Advanced genetic and infectious disease screening</li>
             <li>Real-time digital access to all test results via the Portal</li>
           </ul>
+          <button class="btn btn-sm" style="margin-top:1rem; background:var(--teal-50); color:var(--teal-700); border:1px solid var(--teal-200); width:100%;" onclick="openBookingModal('Advanced Laboratory Testing')">Book Service Slot</button>
         </div>
       </div>
       <div class="service-item">
@@ -444,6 +446,7 @@
             <li>Low-dose 128-slice CT Scans and 3D Mammography</li>
             <li>Doppler ultrasounds and targeted fluoroscopy</li>
           </ul>
+          <button class="btn btn-sm" style="margin-top:1rem; background:var(--teal-50); color:var(--teal-700); border:1px solid var(--teal-200); width:100%;" onclick="openBookingModal('Radiology & Digital Imaging')">Book Service Slot</button>
         </div>
       </div>
       <div class="service-item">
@@ -456,6 +459,7 @@
             <li>Expert pharmacist consultations for medication management</li>
             <li>Automated refill reminders and home delivery options</li>
           </ul>
+          <button class="btn btn-sm" style="margin-top:1rem; background:var(--teal-50); color:var(--teal-700); border:1px solid var(--teal-200); width:100%;" onclick="openBookingModal('24/7 Pharmacy & Dispensary')">Book Service Slot</button>
         </div>
       </div>
       <div class="service-item">
@@ -468,6 +472,7 @@
             <li>Fleet of ICU-equipped Advanced Life Support ambulances</li>
             <li>On-call neurosurgeons and cardiovascular specialists</li>
           </ul>
+          <button class="btn btn-sm" style="margin-top:1rem; background:var(--teal-50); color:var(--teal-700); border:1px solid var(--teal-200); width:100%;" onclick="openBookingModal('Level-1 Emergency & Trauma')">Book Service Slot</button>
         </div>
       </div>
       <div class="service-item">
@@ -480,6 +485,7 @@
             <li>Advanced neurosurgery and spinal reconstructions</li>
             <li>Comprehensive post-operative ICU recovery care</li>
           </ul>
+          <button class="btn btn-sm" style="margin-top:1rem; background:var(--teal-50); color:var(--teal-700); border:1px solid var(--teal-200); width:100%;" onclick="openBookingModal('Robotic & Specialized Surgery')">Book Service Slot</button>
         </div>
       </div>
     </div>
@@ -637,6 +643,12 @@
         </div>
         <button class="btn btn-primary" style="width:100%; padding:12px; margin-top:0.5rem;" onclick="saveProfile()">Save Profile Changes</button>
       </div>
+      <div id="patient-bookings-section" style="max-width:600px; margin:2rem auto 0; background:white; border-radius:16px; padding:2rem; border:1px solid var(--border); box-shadow:0 8px 24px rgba(0,0,0,0.04); display:none;">
+        <h2 style="font-family:'Lora', serif; margin-bottom:1rem; color:var(--teal-900);">My Bookings</h2>
+        <div id="bookings-list" style="display:flex; flex-direction:column; gap:1rem;">
+          <!-- Populated by JS -->
+        </div>
+      </div>
       <div id="patient-review-section" style="max-width:600px; margin:2rem auto 0; background:white; border-radius:16px; padding:2rem; border:1px solid var(--border); box-shadow:0 8px 24px rgba(0,0,0,0.04); display:none;">
         <h2 style="font-family:'Lora', serif; margin-bottom:1rem; color:var(--teal-900);">Write a Review</h2>
         <p style="font-size:0.9rem; color:var(--text-sec); margin-bottom:1.5rem;">Share your experience with MediCare. Your review will be featured dynamically on the home page!</p>
@@ -683,6 +695,39 @@
     </div>
   </div>
 </div>
+
+<!-- BOOKING MODAL -->
+<div id="booking-modal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Book a Service Slot</h3>
+    </div>
+    <div class="modal-body">
+      <div id="booking-success" style="display:none; background:var(--teal-50); color:var(--teal-700); padding:12px; border-radius:8px; margin-bottom:1.5rem; font-size:0.9rem; font-weight:500;">Slot booked successfully! You can view it in your Settings.</div>
+      <div class="form-group">
+        <label>Selected Service</label>
+        <input type="text" id="book-service-name" readonly style="background:#f1f5f9; cursor:not-allowed; border: 1px solid var(--border); padding:12px 16px; border-radius:10px; width:100%; font-family:'DM Sans', sans-serif; font-size:0.95rem;">
+      </div>
+      <div class="form-group">
+        <label>Preferred Date</label>
+        <input type="date" id="book-date" style="border: 1px solid var(--border); padding:12px 16px; border-radius:10px; width:100%; font-family:'DM Sans', sans-serif; font-size:0.95rem;">
+      </div>
+      <div class="form-group">
+        <label>Time Slot</label>
+        <select id="book-time" style="width:100%; padding:12px 16px; border:1px solid var(--border); border-radius:10px; font-family:'DM Sans', sans-serif; font-size:1rem; outline:none; background:white;">
+          <option value="Morning (9 AM - 12 PM)">Morning (9 AM - 12 PM)</option>
+          <option value="Afternoon (1 PM - 4 PM)">Afternoon (1 PM - 4 PM)</option>
+          <option value="Evening (5 PM - 8 PM)">Evening (5 PM - 8 PM)</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeBookingModal()">Close</button>
+      <button class="btn btn-primary" onclick="submitServiceBooking()">Confirm Booking</button>
+    </div>
+  </div>
+</div>
+
 <script>
 let USERS = {};
 let CONVERSATIONS = {};
@@ -692,7 +737,7 @@ let signupRole = 'patient';
 
 const MockDB = {
   load: function() {
-    return JSON.parse(localStorage.getItem('medicare_db_v2') || '{"users":{}, "conversations":{}, "reviews":[]}');
+    return JSON.parse(localStorage.getItem('medicare_db_v2') || '{"users":{}, "conversations":{}, "reviews":[], "bookings":[]}');
   },
   save: function(data) {
     localStorage.setItem('medicare_db_v2', JSON.stringify(data));
@@ -748,6 +793,17 @@ const MockDB = {
   getReviews: function() {
     const data = this.load();
     return data.reviews || [];
+  },
+  addBooking: function(booking) {
+    const data = this.load();
+    if (!data.bookings) data.bookings = [];
+    data.bookings.push(booking);
+    this.save(data);
+  },
+  getBookings: function(username) {
+    const data = this.load();
+    if (!data.bookings) return [];
+    return data.bookings.filter(b => b.username === username);
   }
 };
 MockDB.init();
@@ -1103,10 +1159,13 @@ function showSettings() {
   if (doc.role === 'patient') {
     document.getElementById('set-spec-group').style.display = 'none';
     document.getElementById('patient-review-section').style.display = 'block';
+    document.getElementById('patient-bookings-section').style.display = 'block';
+    renderBookings();
   } else {
     document.getElementById('set-spec-group').style.display = 'block';
     document.getElementById('set-spec').value = doc.specialty || '';
     document.getElementById('patient-review-section').style.display = 'none';
+    document.getElementById('patient-bookings-section').style.display = 'none';
   }
 }
 
@@ -1167,6 +1226,67 @@ function renderTestimonials() {
             <span class="test-role">Verified Patient</span>
           </div>
         </div>
+      </div>
+    `;
+  });
+}
+
+function openBookingModal(serviceName) {
+  if (!currentUser) {
+    alert("Please Sign In to book a service slot.");
+    showPage('login');
+    return;
+  }
+  document.getElementById('booking-modal').classList.add('active');
+  document.getElementById('booking-success').style.display = 'none';
+  document.getElementById('book-service-name').value = serviceName;
+  document.getElementById('book-date').value = new Date().toISOString().split('T')[0];
+}
+
+function closeBookingModal() {
+  document.getElementById('booking-modal').classList.remove('active');
+}
+
+function submitServiceBooking() {
+  const serviceName = document.getElementById('book-service-name').value;
+  const date = document.getElementById('book-date').value;
+  const time = document.getElementById('book-time').value;
+  
+  if (!date) return;
+  
+  MockDB.addBooking({
+    username: currentUser,
+    service: serviceName,
+    date: date,
+    time: time,
+    status: 'Confirmed'
+  });
+  
+  document.getElementById('booking-success').style.display = 'block';
+  setTimeout(() => {
+    closeBookingModal();
+  }, 2000);
+}
+
+function renderBookings() {
+  const container = document.getElementById('bookings-list');
+  if (!container) return;
+  
+  const bookings = MockDB.getBookings(currentUser);
+  if (bookings.length === 0) {
+    container.innerHTML = '<p style="color:var(--text-sec); font-size:0.95rem;">You have no upcoming service bookings.</p>';
+    return;
+  }
+  
+  container.innerHTML = '';
+  bookings.forEach(b => {
+    container.innerHTML += `
+      <div style="padding:1rem; border:1px solid var(--border); border-radius:12px; background:#f8fafc; display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <h4 style="color:var(--teal-900); margin-bottom:0.25rem;">${b.service}</h4>
+          <div style="font-size:0.85rem; color:var(--text-sec);">🗓 ${b.date} &nbsp;|&nbsp; 🕒 ${b.time}</div>
+        </div>
+        <span style="padding:4px 12px; background:var(--teal-100); color:var(--teal-800); border-radius:20px; font-size:0.8rem; font-weight:600;">${b.status}</span>
       </div>
     `;
   });
