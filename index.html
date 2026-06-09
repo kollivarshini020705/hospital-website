@@ -905,6 +905,24 @@ function initSocket() {
   socket = io();
   socket.emit('join', currentUser);
   
+  socket.on('newBooking', (booking) => {
+    const toast = document.createElement('div');
+    toast.style.cssText = 'position:fixed; bottom:20px; right:20px; background:white; border-left:4px solid var(--teal-500); padding:16px 24px; border-radius:8px; box-shadow:0 10px 25px rgba(0,0,0,0.1); z-index:9999; transform:translateX(120%); transition:transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);';
+    toast.innerHTML = `<h4 style="margin:0 0 4px 0; color:var(--teal-900);">📅 New Appointment Booked!</h4><p style="margin:0; font-size:0.95rem; color:var(--text-sec);">${booking.username} booked: <b>${booking.service}</b></p>`;
+    document.body.appendChild(toast);
+    
+    setTimeout(() => { toast.style.transform = 'translateX(0)'; }, 100);
+    
+    setTimeout(() => {
+      toast.style.transform = 'translateX(120%)';
+      setTimeout(() => toast.remove(), 400);
+    }, 6000);
+    
+    if (document.getElementById('settings-area') && document.getElementById('settings-area').style.display === 'block') {
+      renderBookings();
+    }
+  });
+  
   socket.on('newMessage', (msg) => {
     // If we're currently viewing the conversation where the message belongs
     if (currentConv === msg.conversationId) {

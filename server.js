@@ -154,6 +154,11 @@ app.post('/api/bookings', (req, res) => {
     const newBooking = { ...req.body, status: 'Confirmed', _id: uuid() };
     db.bookings.push(newBooking);
     saveDB();
+
+    if (newBooking.doctorId && connectedUsers[newBooking.doctorId]) {
+      io.to(connectedUsers[newBooking.doctorId]).emit('newBooking', newBooking);
+    }
+
     res.status(201).json(newBooking);
   } catch (error) {
     res.status(500).json({ error: error.message });
