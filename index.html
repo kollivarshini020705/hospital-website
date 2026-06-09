@@ -381,37 +381,8 @@
 
   <div class="testimonials-section">
     <h2>What Our Patients Say</h2>
-    <div class="test-grid">
-      <div class="test-card">
-        <div class="test-text">"The doctors were incredibly responsive. I was able to get a prescription for my fever within 10 minutes without leaving my bed. Highly recommended!"</div>
-        <div class="test-author">
-          <div class="test-av">AM</div>
-          <div>
-            <span class="test-name">Alice M.</span>
-            <span class="test-role">Verified Patient</span>
-          </div>
-        </div>
-      </div>
-      <div class="test-card">
-        <div class="test-text">"As a busy professional, I don't have time to wait in hospital lobbies. The real-time chat and digital reports feature saved me hours of hassle."</div>
-        <div class="test-author">
-          <div class="test-av">JR</div>
-          <div>
-            <span class="test-name">James R.</span>
-            <span class="test-role">Verified Patient</span>
-          </div>
-        </div>
-      </div>
-      <div class="test-card">
-        <div class="test-text">"The diet plan provided by my assigned specialist was detailed and easy to follow. A truly modern and impressive healthcare experience."</div>
-        <div class="test-author">
-          <div class="test-av">SK</div>
-          <div>
-            <span class="test-name">Sarah K.</span>
-            <span class="test-role">Verified Patient</span>
-          </div>
-        </div>
-      </div>
+    <div class="test-grid" id="testimonials-grid-container">
+      <!-- Dynamically populated by JS -->
     </div>
   </div>
 </div>
@@ -634,6 +605,13 @@
         </div>
         <button class="btn btn-primary" style="width:100%; padding:12px; margin-top:0.5rem;" onclick="saveProfile()">Save Profile Changes</button>
       </div>
+      <div id="patient-review-section" style="max-width:600px; margin:2rem auto 0; background:white; border-radius:16px; padding:2rem; border:1px solid var(--border); box-shadow:0 8px 24px rgba(0,0,0,0.04); display:none;">
+        <h2 style="font-family:'Lora', serif; margin-bottom:1rem; color:var(--teal-900);">Write a Review</h2>
+        <p style="font-size:0.9rem; color:var(--text-sec); margin-bottom:1.5rem;">Share your experience with MediCare. Your review will be featured dynamically on the home page!</p>
+        <div id="review-success" style="display:none; background:var(--teal-50); color:var(--teal-700); padding:12px; border-radius:8px; margin-bottom:1.5rem; font-size:0.9rem; font-weight:500;">Review submitted successfully! Check the home page.</div>
+        <textarea id="review-text" placeholder="Write your review here..." style="width:100%; padding:12px 16px; border:1px solid var(--border); border-radius:10px; font-family:'DM Sans', sans-serif; font-size:0.95rem; resize:vertical; min-height:100px; margin-bottom:1rem;"></textarea>
+        <button class="btn btn-primary" onclick="submitReview()">Submit Review</button>
+      </div>
     </div>
   </div>
 </div>
@@ -682,7 +660,7 @@ let signupRole = 'patient';
 
 const MockDB = {
   load: function() {
-    return JSON.parse(localStorage.getItem('medicare_db_v2') || '{"users":{}, "conversations":{}}');
+    return JSON.parse(localStorage.getItem('medicare_db_v2') || '{"users":{}, "conversations":{}, "reviews":[]}');
   },
   save: function(data) {
     localStorage.setItem('medicare_db_v2', JSON.stringify(data));
@@ -728,6 +706,16 @@ const MockDB = {
       data.conversations[convId].messages.push(msg);
       this.save(data);
     }
+  },
+  addReview: function(review) {
+    const data = this.load();
+    if (!data.reviews) data.reviews = [];
+    data.reviews.push(review);
+    this.save(data);
+  },
+  getReviews: function() {
+    const data = this.load();
+    return data.reviews || [];
   }
 };
 MockDB.init();
@@ -781,6 +769,7 @@ function showPage(name) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById('page-' + name).classList.add('active');
   if (name === 'doctors') renderDoctorsGrid();
+  if (name === 'home') renderTestimonials();
 }
 
 function switchSignupRole(role) {
@@ -1081,9 +1070,11 @@ function showSettings() {
   
   if (doc.role === 'patient') {
     document.getElementById('set-spec-group').style.display = 'none';
+    document.getElementById('patient-review-section').style.display = 'block';
   } else {
     document.getElementById('set-spec-group').style.display = 'block';
     document.getElementById('set-spec').value = doc.specialty || '';
+    document.getElementById('patient-review-section').style.display = 'none';
   }
 }
 
@@ -1106,6 +1097,51 @@ function saveProfile() {
   // Update Doctors Grid just in case they navigate back
   renderDoctorsGrid();
 }
+
+function submitReview() {
+  const text = document.getElementById('review-text').value.trim();
+  if (!text) return;
+  const doc = USERS[currentUser];
+  MockDB.addReview({
+    name: doc.name || doc.username,
+    initials: doc.initials,
+    text: text
+  });
+  document.getElementById('review-success').style.display = 'block';
+  document.getElementById('review-text').value = '';
+}
+
+function renderTestimonials() {
+  const container = document.getElementById('testimonials-grid-container');
+  if (!container) return;
+  const reviews = MockDB.getReviews();
+  
+  if (reviews.length === 0) {
+    container.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; padding: 3rem; background: white; border-radius: 16px; border: 1px dashed var(--border); color: var(--text-sec);">No reviews yet. Create an account and share your experience to be featured here!</div>';
+    return;
+  }
+  
+  container.innerHTML = '';
+  // Show up to 3 most recent reviews
+  const recentReviews = reviews.slice(-3).reverse();
+  recentReviews.forEach(rev => {
+    container.innerHTML += `
+      <div class="test-card">
+        <div class="test-text">"${rev.text}"</div>
+        <div class="test-author">
+          <div class="test-av">${rev.initials}</div>
+          <div>
+            <span class="test-name">${rev.name}</span>
+            <span class="test-role">Verified Patient</span>
+          </div>
+        </div>
+      </div>
+    `;
+  });
+}
+
+// Call on initial load
+renderTestimonials();
 </script>
 </body>
 </html>
