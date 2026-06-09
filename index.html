@@ -563,6 +563,7 @@
       <div class="role-tabs">
         <button class="role-tab active" id="signup-tab-patient" onclick="switchSignupRole('patient')">Patient</button>
         <button class="role-tab" id="signup-tab-doctor" onclick="switchSignupRole('doctor')">Doctor</button>
+        <button class="role-tab" id="signup-tab-admin" onclick="switchSignupRole('admin')">Admin</button>
       </div>
       <div class="form-group">
         <label>Full Name</label>
@@ -655,6 +656,49 @@
         <div id="review-success" style="display:none; background:var(--teal-50); color:var(--teal-700); padding:12px; border-radius:8px; margin-bottom:1.5rem; font-size:0.9rem; font-weight:500;">Review submitted successfully! Check the home page.</div>
         <textarea id="review-text" placeholder="Write your review here..." style="width:100%; padding:12px 16px; border:1px solid var(--border); border-radius:10px; font-family:'DM Sans', sans-serif; font-size:0.95rem; resize:vertical; min-height:100px; margin-bottom:1rem;"></textarea>
         <button class="btn btn-primary" onclick="submitReview()">Submit Review</button>
+      </div>
+    </div>
+    </div>
+  </div>
+</div>
+
+<!-- ADMIN AREA -->
+<div class="chat-area" id="admin-area" style="display:none; padding:2rem; overflow-y:auto; background:var(--bg-sec); width: 100%;">
+  <div style="max-width:1000px; margin:0 auto;">
+    <h2 style="font-family:'Lora', serif; margin-bottom:1.5rem; color:var(--teal-900);">Hospital Command Center</h2>
+    
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:1.5rem; margin-bottom:2rem;">
+      <div style="background:white; padding:1.5rem; border-radius:12px; border:1px solid var(--border); box-shadow:0 4px 12px rgba(0,0,0,0.02); text-align:center;">
+        <h4 style="color:var(--text-sec); text-transform:uppercase; font-size:0.8rem; letter-spacing:1px; margin-bottom:0.5rem;">Total Bookings</h4>
+        <div id="admin-stat-bookings" style="font-size:2.5rem; font-weight:700; color:var(--teal-600);">0</div>
+      </div>
+      <div style="background:white; padding:1.5rem; border-radius:12px; border:1px solid var(--border); box-shadow:0 4px 12px rgba(0,0,0,0.02); text-align:center;">
+        <h4 style="color:var(--text-sec); text-transform:uppercase; font-size:0.8rem; letter-spacing:1px; margin-bottom:0.5rem;">Total Patients</h4>
+        <div id="admin-stat-patients" style="font-size:2.5rem; font-weight:700; color:var(--blue-600);">0</div>
+      </div>
+      <div style="background:white; padding:1.5rem; border-radius:12px; border:1px solid var(--border); box-shadow:0 4px 12px rgba(0,0,0,0.02); text-align:center;">
+        <h4 style="color:var(--text-sec); text-transform:uppercase; font-size:0.8rem; letter-spacing:1px; margin-bottom:0.5rem;">Total Doctors</h4>
+        <div id="admin-stat-doctors" style="font-size:2.5rem; font-weight:700; color:var(--purple-600);">0</div>
+      </div>
+    </div>
+    
+    <div style="background:white; border-radius:16px; padding:2rem; border:1px solid var(--border); box-shadow:0 8px 24px rgba(0,0,0,0.04);">
+      <h3 style="font-family:'Lora', serif; color:var(--teal-900); margin-bottom:1.5rem;">All Master Bookings</h3>
+      <div style="overflow-x:auto;">
+        <table style="width:100%; border-collapse:collapse; text-align:left;">
+          <thead>
+            <tr style="border-bottom:2px solid var(--border); color:var(--text-sec); font-size:0.85rem; text-transform:uppercase; letter-spacing:0.05em;">
+              <th style="padding:1rem;">Patient</th>
+              <th style="padding:1rem;">Service / Doctor</th>
+              <th style="padding:1rem;">Date & Time</th>
+              <th style="padding:1rem;">Status</th>
+              <th style="padding:1rem; text-align:right;">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="admin-bookings-list">
+            <!-- Bookings dynamically rendered here -->
+          </tbody>
+        </table>
       </div>
     </div>
   </div>
@@ -817,6 +861,7 @@ function switchSignupRole(role) {
   signupRole = role;
   document.getElementById('signup-tab-patient').classList.toggle('active', role === 'patient');
   document.getElementById('signup-tab-doctor').classList.toggle('active', role === 'doctor');
+  document.getElementById('signup-tab-admin').classList.toggle('active', role === 'admin');
   document.getElementById('signup-specialty-group').style.display = role === 'doctor' ? 'block' : 'none';
 }
 
@@ -920,17 +965,31 @@ function setupPortal() {
   const user = USERS[currentUser];
   const av = document.getElementById('sidebar-avatar');
   av.textContent = user.initials;
-  av.className = 'avatar ' + (user.role === 'doctor' ? 'av-teal' : 'av-blue');
+  av.className = 'avatar ' + (user.role === 'doctor' ? 'av-teal' : (user.role === 'admin' ? 'av-purple' : 'av-blue'));
   document.getElementById('sidebar-name').textContent = user.name;
   const rb = document.getElementById('sidebar-role-badge');
-  rb.textContent = user.role === 'doctor' ? (user.specialty || 'Doctor') : 'Patient';
-  rb.className = 'badge-role ' + (user.role === 'doctor' ? 'role-doctor' : 'role-patient');
+  rb.textContent = user.role === 'doctor' ? (user.specialty || 'Doctor') : (user.role === 'admin' ? 'Admin' : 'Patient');
+  rb.className = 'badge-role ' + (user.role === 'doctor' ? 'role-doctor' : (user.role === 'admin' ? 'role-admin' : 'role-patient'));
 
-  document.getElementById('chat-list-label').textContent = user.role === 'doctor' ? 'My Patients' : 'My Doctors';
-  renderChatList();
-  document.getElementById('empty-chat').style.display = 'flex';
-  const old = document.getElementById('active-chat');
-  if(old) old.remove();
+  const sidebar = document.querySelector('.sidebar');
+  if (user.role === 'admin') {
+    sidebar.style.display = 'none';
+    document.getElementById('chat-area').style.display = 'none';
+    document.getElementById('settings-area').style.display = 'none';
+    document.getElementById('admin-area').style.display = 'block';
+    renderAdminDashboard();
+  } else {
+    sidebar.style.display = 'flex';
+    document.getElementById('admin-area').style.display = 'none';
+    document.getElementById('chat-area').style.display = 'flex';
+    document.getElementById('settings-area').style.display = 'none';
+    
+    document.getElementById('chat-list-label').textContent = user.role === 'doctor' ? 'My Patients' : 'My Doctors';
+    renderChatList();
+    document.getElementById('empty-chat').style.display = 'flex';
+    const old = document.getElementById('active-chat');
+    if(old) old.remove();
+  }
 }
 
 function renderChatList() {
@@ -1340,8 +1399,90 @@ async function renderBookings() {
   }
 }
 
+async function renderAdminDashboard() {
+  try {
+    const bRes = await fetch('/api/admin/bookings');
+    let bookings = [];
+    if(bRes.ok) bookings = await bRes.json();
+    
+    const patients = Object.values(USERS).filter(u => u.role === 'patient').length;
+    const doctors = Object.values(USERS).filter(u => u.role === 'doctor').length;
+    
+    document.getElementById('admin-stat-bookings').textContent = bookings.length;
+    document.getElementById('admin-stat-patients').textContent = patients;
+    document.getElementById('admin-stat-doctors').textContent = doctors;
+    
+    const tbody = document.getElementById('admin-bookings-list');
+    tbody.innerHTML = '';
+    
+    if (bookings.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" style="padding:2rem; text-align:center; color:var(--text-sec);">No bookings found in the system.</td></tr>';
+      return;
+    }
+    
+    bookings.forEach(b => {
+      let tr = document.createElement('tr');
+      tr.style.borderBottom = '1px solid var(--border)';
+      
+      const pName = USERS[b.username] ? USERS[b.username].name : b.username;
+      const dName = b.doctorId && USERS[b.doctorId] ? USERS[b.doctorId].name : b.service;
+      
+      const isCompleted = b.status === 'Completed';
+      const isCancelled = b.status === 'Cancelled';
+      let statusColor = 'var(--teal-600)';
+      let statusBg = 'var(--teal-50)';
+      if (isCompleted) { statusColor = 'var(--blue-600)'; statusBg = 'var(--blue-50)'; }
+      if (isCancelled) { statusColor = 'var(--coral-600)'; statusBg = '#fef2f2'; }
+      
+      let actionsHTML = '';
+      if (!isCompleted && !isCancelled) {
+        actionsHTML = `
+          <button class="btn btn-sm btn-outline" style="padding:4px 8px; font-size:0.75rem;" onclick="updateBookingStatus('${b._id}', 'Completed')">Complete</button>
+          <button class="btn btn-sm btn-danger" style="padding:4px 8px; font-size:0.75rem; margin-left:4px;" onclick="updateBookingStatus('${b._id}', 'Cancelled')">Cancel</button>
+        `;
+      }
+      
+      tr.innerHTML = `
+        <td style="padding:1rem;">
+          <div style="font-weight:600; color:var(--text);">${pName}</div>
+          <div style="font-size:0.8rem; color:var(--text-sec);">${b.phone || 'No Phone'}</div>
+        </td>
+        <td style="padding:1rem;">
+          <div style="font-weight:500;">${dName}</div>
+          <div style="font-size:0.8rem; color:var(--text-sec);">${b.reason || 'No Reason'}</div>
+        </td>
+        <td style="padding:1rem; font-size:0.9rem; color:var(--text-sec);">
+          ${b.date} <br> ${b.time}
+        </td>
+        <td style="padding:1rem;">
+          <span style="padding:4px 12px; background:${statusBg}; color:${statusColor}; border-radius:20px; font-size:0.8rem; font-weight:600; white-space:nowrap;">${b.status}</span>
+        </td>
+        <td style="padding:1rem; text-align:right;">
+          ${actionsHTML}
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+  } catch(e) {
+    console.error("Admin render error", e);
+  }
+}
+
+async function updateBookingStatus(id, newStatus) {
+  try {
+    await fetch(`/api/admin/bookings/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: newStatus })
+    });
+    renderAdminDashboard();
+  } catch(e) {
+    console.error(e);
+  }
+}
+
 // Call on initial load
-renderTestimonials();
+showPage('home');
 </script>
 </body>
 </html>

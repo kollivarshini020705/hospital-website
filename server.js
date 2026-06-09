@@ -163,6 +163,25 @@ app.post('/api/bookings', async (req, res) => {
   }
 });
 
+app.get('/api/admin/bookings', async (req, res) => {
+  try {
+    const bookings = await Booking.find();
+    res.json(bookings);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.put('/api/admin/bookings/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updated = await Booking.findByIdAndUpdate(id, { status: req.body.status }, { new: true });
+    res.json(updated);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.get('/api/bookings/:username', async (req, res) => {
   try {
     const { username } = req.params;
