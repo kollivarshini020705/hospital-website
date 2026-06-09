@@ -396,6 +396,18 @@
     <p>Meet our team of experienced and highly qualified medical professionals.</p>
   </div>
   <div class="page-content">
+    <div style="margin-bottom: 2.5rem; display:flex; flex-wrap:wrap; gap: 1rem; max-width: 800px; margin-left: auto; margin-right: auto; background: white; padding: 1.5rem; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 4px 12px rgba(0,0,0,0.02);">
+      <div style="flex:1; min-width: 250px;">
+        <label style="display:block; font-size:0.8rem; font-weight:600; color:var(--text-sec); margin-bottom:0.5rem; text-transform:uppercase;">Search by Name</label>
+        <input type="text" id="doc-search-name" placeholder="e.g. Dr. Smith..." style="width:100%; padding:12px 16px; border:1px solid var(--border); border-radius:8px; font-family:'DM Sans', sans-serif; font-size:0.95rem; outline:none; transition:border 0.2s;" onkeyup="renderDoctorsGrid()">
+      </div>
+      <div style="flex:1; min-width: 250px;">
+        <label style="display:block; font-size:0.8rem; font-weight:600; color:var(--text-sec); margin-bottom:0.5rem; text-transform:uppercase;">Filter by Specialty</label>
+        <select id="doc-search-spec" style="width:100%; padding:12px 16px; border:1px solid var(--border); border-radius:8px; font-family:'DM Sans', sans-serif; font-size:0.95rem; background:white; outline:none; transition:border 0.2s;" onchange="renderDoctorsGrid()">
+          <option value="">All Specialties</option>
+        </select>
+      </div>
+    </div>
     <div class="doctors-grid" id="doctors-grid-container">
       <!-- Dynamically populated by JS -->
     </div>
@@ -839,9 +851,35 @@ async function renderDoctorsGrid() {
   
   const doctors = Object.values(allUsers).filter(u => u.role === 'doctor');
   
+  const specSelect = document.getElementById('doc-search-spec');
+  if (specSelect && specSelect.options.length === 1) {
+    const specs = [...new Set(doctors.map(d => d.specialty || 'General Practitioner'))].sort();
+    specs.forEach(s => {
+      const opt = document.createElement('option');
+      opt.value = s;
+      opt.textContent = s;
+      specSelect.appendChild(opt);
+    });
+  }
+
+  const nameQuery = document.getElementById('doc-search-name') ? document.getElementById('doc-search-name').value.toLowerCase() : '';
+  const specQuery = document.getElementById('doc-search-spec') ? document.getElementById('doc-search-spec').value : '';
+
+  const filteredDoctors = doctors.filter(doc => {
+    const matchName = doc.name.toLowerCase().includes(nameQuery);
+    const docSpec = doc.specialty || 'General Practitioner';
+    const matchSpec = specQuery === '' || docSpec === specQuery;
+    return matchName && matchSpec;
+  });
+  
   container.innerHTML = '';
   
-  doctors.forEach(doc => {
+  if (filteredDoctors.length === 0) {
+    container.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; padding: 3rem; background: white; border-radius: 16px; border: 1px dashed var(--border); color: var(--text-sec);">No doctors found matching your search criteria.</div>';
+    return;
+  }
+  
+  filteredDoctors.forEach(doc => {
     let avatarHTML = `<div class="doc-avatar">${doc.initials}</div>`;
 
     const docCard = `
