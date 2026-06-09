@@ -79,6 +79,7 @@ app.get('/api/users', (req, res) => {
     const usersObj = {};
     db.users.forEach(u => {
       const { password, ...safeUser } = u;
+      safeUser.isOnline = !!connectedUsers[u.username];
       usersObj[u.username] = safeUser;
     });
     res.json(usersObj);
