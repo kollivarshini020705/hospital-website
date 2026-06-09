@@ -584,22 +584,25 @@
 <!-- LOGIN PAGE -->
 <div id="page-login" class="page">
   <div class="login-wrap">
-    <div class="login-card">
-      <h2>Welcome back</h2>
-      <p class="sub">Sign in to your MediCare portal</p>
-      <div class="form-group">
-        <label>Username</label>
-        <input type="text" id="login-user" placeholder="Enter username" />
+    <div style="display: flex; flex-direction: row; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.5); box-shadow: 0 16px 40px rgba(0,0,0,0.06); border-radius: 20px; max-width: 900px; width: 100%; overflow: hidden; z-index: 1;">
+      <div style="flex: 1; background: url('images/dashboard_chat.png') center/cover no-repeat; border-right: 1px solid var(--border); min-height: 500px;"></div>
+      <div class="login-card" style="flex: 1; border: none; box-shadow: none; max-width: none; border-radius: 0;">
+        <h2>Welcome back</h2>
+        <p class="sub">Sign in to your MediCare portal</p>
+        <div class="form-group">
+          <label>Username</label>
+          <input type="text" id="login-user" placeholder="Enter username" />
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" id="login-pass" placeholder="Enter password" />
+        </div>
+        <p id="login-error" style="color:var(--coral-600);font-size:0.82rem;margin-bottom:0.8rem;display:none;">Invalid credentials.</p>
+        <button class="btn btn-primary" onclick="doLogin()">Sign In</button>
+        <p style="text-align:center; font-size:0.85rem; margin-top:1rem; color:var(--text-sec);">
+          If account is not there, <a href="#" onclick="showPage('signup')" style="color:var(--teal-600); text-decoration:none; font-weight:500;">Create Account</a>
+        </p>
       </div>
-      <div class="form-group">
-        <label>Password</label>
-        <input type="password" id="login-pass" placeholder="Enter password" />
-      </div>
-      <p id="login-error" style="color:var(--coral-600);font-size:0.82rem;margin-bottom:0.8rem;display:none;">Invalid credentials.</p>
-      <button class="btn btn-primary" onclick="doLogin()">Sign In</button>
-      <p style="text-align:center; font-size:0.85rem; margin-top:1rem; color:var(--text-sec);">
-        If account is not there, <a href="#" onclick="showPage('signup')" style="color:var(--teal-600); text-decoration:none; font-weight:500;">Create Account</a>
-      </p>
     </div>
   </div>
 </div>
@@ -607,35 +610,38 @@
 <!-- SIGNUP PAGE -->
 <div id="page-signup" class="page">
   <div class="login-wrap">
-    <div class="login-card">
-      <h2>Create Account</h2>
-      <p class="sub">Join MediCare to connect with doctors and patients</p>
-      <div class="role-tabs">
-        <button class="role-tab active" id="signup-tab-patient" onclick="switchSignupRole('patient')">Patient</button>
-        <button class="role-tab" id="signup-tab-doctor" onclick="switchSignupRole('doctor')">Doctor</button>
-        <button class="role-tab" id="signup-tab-admin" onclick="switchSignupRole('admin')">Admin</button>
+    <div style="display: flex; flex-direction: row; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.5); box-shadow: 0 16px 40px rgba(0,0,0,0.06); border-radius: 20px; max-width: 900px; width: 100%; overflow: hidden; z-index: 1;">
+      <div style="flex: 1; background: url('images/dashboard_chat.png') center/cover no-repeat; border-right: 1px solid var(--border); min-height: 500px;"></div>
+      <div class="login-card" style="flex: 1; border: none; box-shadow: none; max-width: none; border-radius: 0;">
+        <h2>Create Account</h2>
+        <p class="sub">Join MediCare to connect with doctors and patients</p>
+        <div class="role-tabs">
+          <button class="role-tab active" id="signup-tab-patient" onclick="switchSignupRole('patient')">Patient</button>
+          <button class="role-tab" id="signup-tab-doctor" onclick="switchSignupRole('doctor')">Doctor</button>
+          <button class="role-tab" id="signup-tab-admin" onclick="switchSignupRole('admin')">Admin</button>
+        </div>
+        <div class="form-group">
+          <label>Full Name</label>
+          <input type="text" id="signup-name" placeholder="e.g. John Doe" />
+        </div>
+        <div class="form-group">
+          <label>Username</label>
+          <input type="text" id="signup-user" placeholder="Choose a username" />
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" id="signup-pass" placeholder="Create a password" />
+        </div>
+        <div class="form-group" id="signup-specialty-group" style="display:none;">
+          <label>Specialty</label>
+          <input type="text" id="signup-specialty" placeholder="e.g. Cardiologist, General Physician" />
+        </div>
+        <p id="signup-error" style="color:var(--coral-600);font-size:0.82rem;margin-bottom:0.8rem;display:none;">Please fill all required fields.</p>
+        <button class="btn btn-primary" onclick="doSignup()">Sign Up</button>
+        <p style="text-align:center; font-size:0.85rem; margin-top:1rem; color:var(--text-sec);">
+          Already have an account? <a href="#" onclick="showPage('login')" style="color:var(--teal-600); text-decoration:none; font-weight:500;">Sign In</a>
+        </p>
       </div>
-      <div class="form-group">
-        <label>Full Name</label>
-        <input type="text" id="signup-name" placeholder="e.g. John Doe" />
-      </div>
-      <div class="form-group">
-        <label>Username</label>
-        <input type="text" id="signup-user" placeholder="Choose a username" />
-      </div>
-      <div class="form-group">
-        <label>Password</label>
-        <input type="password" id="signup-pass" placeholder="Create a password" />
-      </div>
-      <div class="form-group" id="signup-specialty-group" style="display:none;">
-        <label>Specialty</label>
-        <input type="text" id="signup-specialty" placeholder="e.g. Cardiologist, General Physician" />
-      </div>
-      <p id="signup-error" style="color:var(--coral-600);font-size:0.82rem;margin-bottom:0.8rem;display:none;">Please fill all required fields.</p>
-      <button class="btn btn-primary" onclick="doSignup()">Sign Up</button>
-      <p style="text-align:center; font-size:0.85rem; margin-top:1rem; color:var(--text-sec);">
-        Already have an account? <a href="#" onclick="showPage('login')" style="color:var(--teal-600); text-decoration:none; font-weight:500;">Sign In</a>
-      </p>
     </div>
   </div>
 </div>
