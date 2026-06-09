@@ -744,99 +744,38 @@ let currentUser = null;
 let currentConv = null;
 let signupRole = 'patient';
 
-const MockDB = {
-  load: function() {
-    return JSON.parse(localStorage.getItem('medicare_db_v2') || '{"users":{}, "conversations":{}, "reviews":[], "bookings":[]}');
-  },
-  save: function(data) {
-    localStorage.setItem('medicare_db_v2', JSON.stringify(data));
-  },
-  init: function() {
-    const data = this.load();
-    // No dummy data. Database starts completely empty and dynamic.
-  },
-  signup: function(req) {
-    const data = this.load();
-    if (data.users[req.username]) return { error: 'Username already exists.' };
-    const initials = req.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() || 'U';
-    const user = { ...req, initials };
-    data.users[req.username] = user;
-    Object.values(data.users).forEach(other => {
-      if (other.role !== req.role) {
-        const convId = 'conv_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
-        data.conversations[convId] = { id: convId, participants: [req.username, other.username], messages: [] };
-      }
-    });
-    this.save(data);
-    return { user };
-  },
-  login: function(req) {
-    const data = this.load();
-    const user = data.users[req.username];
-    if (!user) return { error: 'Account not there. Please create an account.' };
-    if (user.password !== req.password) return { error: 'Invalid credentials.' };
-    return { user };
-  },
-  getUsers: function() { return this.load().users; },
-  getConversations: function(username) {
-    const data = this.load();
-    const userConvs = {};
-    Object.values(data.conversations).forEach(conv => {
-      if (conv.participants.includes(username)) userConvs[conv.id] = conv;
-    });
-    return userConvs;
-  },
-  addMessage: function(convId, msg) {
-    const data = this.load();
-    if (data.conversations[convId]) {
-      data.conversations[convId].messages.push(msg);
-      this.save(data);
-    }
-  },
-  addReview: function(review) {
-    const data = this.load();
-    if (!data.reviews) data.reviews = [];
-    data.reviews.push(review);
-    this.save(data);
-  },
-  getReviews: function() {
-    const data = this.load();
-    return data.reviews || [];
-  },
-  addBooking: function(booking) {
-    const data = this.load();
-    if (!data.bookings) data.bookings = [];
-    data.bookings.push(booking);
-    this.save(data);
-  },
-  getBookings: function(username) {
-    const data = this.load();
-    if (!data.bookings) return [];
-    return data.bookings.filter(b => b.username === username);
-  }
-};
-MockDB.init();
-
 async function fetchInitialData() {
   if (!currentUser) return;
-  USERS = MockDB.getUsers();
-  CONVERSATIONS = MockDB.getConversations(currentUser);
+  try {
+    const userRes = await fetch('/api/users');
+    if(userRes.ok) USERS = await userRes.json();
+    
+    const convRes = await fetch(`/api/conversations/${currentUser}`);
+    if(convRes.ok) CONVERSATIONS = await convRes.json();
+  } catch(e) {
+    console.error("Error fetching data:", e);
+  }
 }
 
-window.addEventListener('storage', (e) => {
-  if (e.key === 'medicare_db_v2' && currentUser) {
-    fetchInitialData().then(() => {
-      if (currentConv) renderMessages(currentConv);
-      renderChatList();
-    });
-  }
-});
+async function refreshChat() {
+  if(!currentUser) return;
+  await fetchInitialData();
+  if (currentConv) renderMessages(currentConv);
+  renderChatList();
+}
 
-function renderDoctorsGrid() {
+setInterval(refreshChat, 5000);
+
+async function renderDoctorsGrid() {
   const container = document.getElementById('doctors-grid-container');
   if (!container) return;
   
-  const allUsers = MockDB.getUsers();
+  let allUsers = {};
+  try {
+    const res = await fetch('/api/users');
+    if (res.ok) allUsers = await res.json();
+  } catch(e) {}
+  
   const doctors = Object.values(allUsers).filter(u => u.role === 'doctor');
   
   container.innerHTML = '';
@@ -890,16 +829,27 @@ async function doSignup() {
     return;
   }
 
-  const res = MockDB.signup({ username: u, password: p, role: signupRole, name, specialty: spec });
-  if (res.error) {
-    err.textContent = res.error;
+  try {
+    const response = await fetch('/api/signup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: u, password: p, role: signupRole, name, specialty: spec })
+    });
+    const res = await response.json();
+    if (!response.ok) {
+      err.textContent = res.error || 'Signup failed.';
+      err.style.display = 'block';
+      return;
+    }
+    
+    err.style.display = 'none';
+    document.getElementById('login-user').value = u;
+    document.getElementById('login-pass').value = p;
+  } catch (e) {
+    err.textContent = "Error connecting to server.";
     err.style.display = 'block';
     return;
   }
-  
-  err.style.display = 'none';
-  document.getElementById('login-user').value = u;
-  document.getElementById('login-pass').value = p;
   
   document.getElementById('signup-name').value = '';
   document.getElementById('signup-user').value = '';
@@ -914,17 +864,27 @@ async function doLogin() {
   const p = document.getElementById('login-pass').value.trim();
   const err = document.getElementById('login-error');
   
-  const res = MockDB.login({ username: u, password: p });
-  if (!res.error) {
-    err.style.display = 'none';
-    currentUser = u;
-    
-    await fetchInitialData();
-    setupPortal();
-    updateAuthUI(true);
-    showPage('portal');
-  } else {
-    err.textContent = res.error || 'Invalid credentials.';
+  try {
+    const response = await fetch('/api/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: u, password: p })
+    });
+    const res = await response.json();
+    if (response.ok) {
+      err.style.display = 'none';
+      currentUser = u;
+      
+      await fetchInitialData();
+      setupPortal();
+      updateAuthUI(true);
+      showPage('portal');
+    } else {
+      err.textContent = res.error || 'Invalid credentials.';
+      err.style.display = 'block';
+    }
+  } catch (e) {
+    err.textContent = "Error connecting to server.";
     err.style.display = 'block';
   }
 }
@@ -1109,11 +1069,17 @@ async function sendMessage() {
   
   const msgData = { conversationId: currentConv, from: currentUser, type: 'text', text, time };
   
-  MockDB.addMessage(currentConv, msgData);
-  await fetchInitialData();
-  input.value = '';
-  renderMessages(currentConv);
-  renderChatList();
+  try {
+    await fetch('/api/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(msgData)
+    });
+    await refreshChat();
+    input.value = '';
+  } catch(e) {
+    console.error(e);
+  }
 }
 
 function openRxModal() {
@@ -1149,11 +1115,17 @@ async function sendPrescription() {
   
   const msgData = { conversationId: currentConv, from: currentUser, type: 'prescription', diagnosis, medicines, diet, reports, notes, time };
 
-  MockDB.addMessage(currentConv, msgData);
-  await fetchInitialData();
-  closeRxModal();
-  renderMessages(currentConv);
-  renderChatList();
+  try {
+    await fetch('/api/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(msgData)
+    });
+    await refreshChat();
+    closeRxModal();
+  } catch(e) {
+    console.error(e);
+  }
 }
 function showSettings() {
   document.getElementById('chat-area').style.display = 'none';
@@ -1166,20 +1138,20 @@ function showSettings() {
   document.getElementById('set-phone').value = doc.phone || '';
   document.getElementById('set-email').value = doc.email || '';
   
+  document.getElementById('patient-bookings-section').style.display = 'block';
+  renderBookings();
+  
   if (doc.role === 'patient') {
     document.getElementById('set-spec-group').style.display = 'none';
     document.getElementById('patient-review-section').style.display = 'block';
-    document.getElementById('patient-bookings-section').style.display = 'block';
-    renderBookings();
   } else {
     document.getElementById('set-spec-group').style.display = 'block';
     document.getElementById('set-spec').value = doc.specialty || '';
     document.getElementById('patient-review-section').style.display = 'none';
-    document.getElementById('patient-bookings-section').style.display = 'none';
   }
 }
 
-function saveProfile() {
+async function saveProfile() {
   const doc = USERS[currentUser];
   doc.name = document.getElementById('set-name').value.trim();
   doc.bio = document.getElementById('set-bio').value.trim();
@@ -1189,33 +1161,50 @@ function saveProfile() {
     doc.specialty = document.getElementById('set-spec').value.trim();
   }
   
-  // Save to MockDB
-  MockDB.save({ users: USERS, conversations: CONVERSATIONS });
-  
-  document.getElementById('settings-success').style.display = 'block';
-  document.getElementById('sidebar-name').textContent = doc.name;
-  
-  // Update Doctors Grid just in case they navigate back
-  renderDoctorsGrid();
+  try {
+    await fetch(`/api/users/${currentUser}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(doc)
+    });
+    
+    document.getElementById('settings-success').style.display = 'block';
+    document.getElementById('sidebar-name').textContent = doc.name;
+    renderDoctorsGrid();
+  } catch(e) {
+    console.error("Save profile error", e);
+  }
 }
 
-function submitReview() {
+async function submitReview() {
   const text = document.getElementById('review-text').value.trim();
   if (!text) return;
   const doc = USERS[currentUser];
-  MockDB.addReview({
-    name: doc.name || doc.username,
-    initials: doc.initials,
-    text: text
-  });
-  document.getElementById('review-success').style.display = 'block';
-  document.getElementById('review-text').value = '';
+  try {
+    await fetch('/api/reviews', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: doc.name || doc.username,
+        initials: doc.initials,
+        text: text
+      })
+    });
+    document.getElementById('review-success').style.display = 'block';
+    document.getElementById('review-text').value = '';
+  } catch(e) {
+    console.error("Review submit error", e);
+  }
 }
 
-function renderTestimonials() {
+async function renderTestimonials() {
   const container = document.getElementById('testimonials-grid-container');
   if (!container) return;
-  const reviews = MockDB.getReviews();
+  let reviews = [];
+  try {
+    const res = await fetch('/api/reviews');
+    if (res.ok) reviews = await res.json();
+  } catch(e) {}
   
   if (reviews.length === 0) {
     container.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; padding: 3rem; background: white; border-radius: 16px; border: 1px dashed var(--border); color: var(--text-sec);">No reviews yet. Create an account and share your experience to be featured here!</div>';

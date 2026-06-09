@@ -26,7 +26,10 @@ const userSchema = new mongoose.Schema({
   role: { type: String, required: true },
   name: { type: String, required: true },
   initials: { type: String },
-  specialty: { type: String }
+  specialty: { type: String },
+  bio: String,
+  phone: String,
+  email: String
 });
 const User = mongoose.model('User', userSchema);
 
@@ -60,6 +63,13 @@ const bookingSchema = new mongoose.Schema({
   status: { type: String, default: 'Confirmed' }
 });
 const Booking = mongoose.model('Booking', bookingSchema);
+
+const reviewSchema = new mongoose.Schema({
+  name: String,
+  initials: String,
+  text: String
+});
+const Review = mongoose.model('Review', reviewSchema);
 
 // API Routes
 app.post('/api/signup', async (req, res) => {
@@ -102,6 +112,16 @@ app.get('/api/users', async (req, res) => {
     const usersObj = {};
     users.forEach(u => usersObj[u.username] = u);
     res.json(usersObj);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.put('/api/users/:username', async (req, res) => {
+  try {
+    const { username } = req.params;
+    const updated = await User.findOneAndUpdate({ username }, req.body, { new: true });
+    res.json(updated);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -150,6 +170,25 @@ app.get('/api/bookings/:username', async (req, res) => {
       $or: [{ username: username }, { doctorId: username }]
     });
     res.json(bookings);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/reviews', async (req, res) => {
+  try {
+    const newReview = new Review(req.body);
+    await newReview.save();
+    res.status(201).json(newReview);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/reviews', async (req, res) => {
+  try {
+    const reviews = await Review.find();
+    res.json(reviews);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
