@@ -607,9 +607,12 @@
       <div class="chat-list" id="chat-list">
         <h4 id="chat-list-label">Consultations</h4>
       </div>
-      <div class="sidebar-footer" style="display:flex; gap:10px;">
-        <button class="btn btn-sm" style="flex:1; background:white; color:var(--text); border:1px solid var(--border);" onclick="showSettings()">⚙️ Settings</button>
-        <button class="btn btn-danger btn-sm" style="flex:1;" onclick="doLogout()">Sign Out</button>
+      <div class="sidebar-footer" style="display:flex; flex-direction:column; gap:10px; padding:10px; border-top:1px solid var(--border);">
+        <button id="btn-my-prescriptions" class="btn btn-sm" style="background:var(--teal-50); color:var(--teal-700); border:1px solid var(--teal-200); display:none;" onclick="showPrescriptions()">💊 My Prescriptions</button>
+        <div style="display:flex; gap:10px;">
+          <button class="btn btn-sm" style="flex:1; background:white; color:var(--text); border:1px solid var(--border);" onclick="showSettings()">⚙️ Settings</button>
+          <button class="btn btn-danger btn-sm" style="flex:1;" onclick="doLogout()">Sign Out</button>
+        </div>
       </div>
     </div>
     <div class="chat-area" id="chat-area">
@@ -700,6 +703,16 @@
           </tbody>
         </table>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- PRESCRIPTIONS AREA (Patient only) -->
+<div class="chat-area" id="prescriptions-area" style="display:none; padding:2rem; overflow-y:auto; background:var(--bg-sec); width: 100%;">
+  <div style="max-width:800px; margin:0 auto;">
+    <h2 style="font-family:'Lora', serif; margin-bottom:1.5rem; color:var(--teal-900);">My Prescriptions & Records</h2>
+    <div id="prescriptions-list" style="display:flex; flex-direction:column; gap:1.5rem;">
+      <!-- Prescriptions rendered here -->
     </div>
   </div>
 </div>
@@ -977,12 +990,16 @@ function setupPortal() {
     document.getElementById('chat-area').style.display = 'none';
     document.getElementById('settings-area').style.display = 'none';
     document.getElementById('admin-area').style.display = 'block';
+    document.getElementById('prescriptions-area').style.display = 'none';
     renderAdminDashboard();
   } else {
     sidebar.style.display = 'flex';
     document.getElementById('admin-area').style.display = 'none';
     document.getElementById('chat-area').style.display = 'flex';
     document.getElementById('settings-area').style.display = 'none';
+    document.getElementById('prescriptions-area').style.display = 'none';
+    
+    document.getElementById('btn-my-prescriptions').style.display = user.role === 'patient' ? 'block' : 'none';
     
     document.getElementById('chat-list-label').textContent = user.role === 'doctor' ? 'My Patients' : 'My Doctors';
     renderChatList();
@@ -1193,6 +1210,8 @@ async function sendPrescription() {
 function showSettings() {
   document.getElementById('chat-area').style.display = 'none';
   document.getElementById('settings-area').style.display = 'block';
+  document.getElementById('admin-area').style.display = 'none';
+  document.getElementById('prescriptions-area').style.display = 'none';
   document.getElementById('settings-success').style.display = 'none';
   
   const doc = USERS[currentUser];
@@ -1479,6 +1498,109 @@ async function updateBookingStatus(id, newStatus) {
   } catch(e) {
     console.error(e);
   }
+}
+
+function showPrescriptions() {
+  document.getElementById('chat-area').style.display = 'none';
+  document.getElementById('settings-area').style.display = 'none';
+  document.getElementById('admin-area').style.display = 'none';
+  document.getElementById('prescriptions-area').style.display = 'block';
+  renderPrescriptions();
+}
+
+function renderPrescriptions() {
+  const container = document.getElementById('prescriptions-list');
+  container.innerHTML = '';
+  
+  const myConvs = Object.values(CONVERSATIONS);
+  let allRx = [];
+  
+  myConvs.forEach(conv => {
+    if(!conv.messages) return;
+    const docId = conv.participants.find(p => p !== currentUser);
+    const doctor = USERS[docId];
+    if(!doctor) return;
+    
+    conv.messages.forEach(m => {
+      if(m.type === 'prescription') {
+        allRx.push({ ...m, doctorName: doctor.name, doctorSpec: doctor.specialty });
+      }
+    });
+  });
+  
+  if(allRx.length === 0) {
+    container.innerHTML = '<div style="text-align:center; padding:3rem; color:var(--text-sec); background:white; border-radius:12px; border:1px dashed var(--border);">No prescriptions found.</div>';
+    return;
+  }
+  
+  allRx.reverse(); // Newest first
+  
+  allRx.forEach((rx, idx) => {
+    const card = document.createElement('div');
+    card.style.cssText = 'background:white; border-radius:16px; border:1px solid var(--border); overflow:hidden; box-shadow:0 4px 12px rgba(0,0,0,0.03);';
+    card.innerHTML = `
+      <div style="background:var(--teal-50); padding:1rem 1.5rem; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--teal-100);">
+        <div>
+          <h4 style="color:var(--teal-900); font-size:1.1rem; font-weight:600; font-family:'Lora', serif; margin:0;">Medical Record</h4>
+          <div style="font-size:0.8rem; color:var(--teal-700); margin-top:2px;">Issued: ${rx.time}</div>
+        </div>
+        <button class="btn btn-outline btn-sm" onclick="printPrescription(this)" style="background:white;">Print PDF</button>
+      </div>
+      <div style="padding:1.5rem;" class="print-area">
+        <div style="display:flex; justify-content:space-between; margin-bottom:1.5rem;">
+          <div>
+            <div style="font-size:0.8rem; color:var(--text-sec); text-transform:uppercase;">Doctor</div>
+            <div style="font-weight:600;">Dr. ${rx.doctorName}</div>
+            <div style="font-size:0.85rem; color:var(--text-sec);">${rx.doctorSpec || 'General'}</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:0.8rem; color:var(--text-sec); text-transform:uppercase;">Diagnosis</div>
+            <div style="font-weight:600; color:var(--coral-600);">${rx.diagnosis || 'General Checkup'}</div>
+          </div>
+        </div>
+        
+        ${rx.medicines && rx.medicines.length > 0 ? `
+        <div style="margin-bottom:1rem;">
+          <div style="font-size:0.8rem; color:var(--text-sec); text-transform:uppercase; margin-bottom:8px;">Medicines Prescribed</div>
+          <ul style="margin:0; padding-left:1.2rem; font-size:0.95rem; line-height:1.6;">
+            ${rx.medicines.map(m => `<li>${m}</li>`).join('')}
+          </ul>
+        </div>` : ''}
+        
+        ${rx.diet ? `
+        <div style="margin-bottom:1rem; padding:12px; background:var(--gray-50); border-radius:8px;">
+          <div style="font-size:0.8rem; color:var(--text-sec); text-transform:uppercase; margin-bottom:4px;">Diet & Lifestyle</div>
+          <div style="font-size:0.95rem;">${rx.diet}</div>
+        </div>` : ''}
+        
+        ${rx.reports ? `
+        <div style="margin-bottom:1rem;">
+          <div style="font-size:0.8rem; color:var(--text-sec); text-transform:uppercase; margin-bottom:4px;">Lab Reports</div>
+          <div style="font-size:0.95rem;">${rx.reports}</div>
+        </div>` : ''}
+        
+        ${rx.notes ? `
+        <div style="padding-top:1rem; border-top:1px dashed var(--border);">
+          <div style="font-size:0.8rem; color:var(--text-sec); text-transform:uppercase; margin-bottom:4px;">Doctor's Notes</div>
+          <div style="font-size:0.95rem; font-style:italic;">"${rx.notes}"</div>
+        </div>` : ''}
+      </div>
+    `;
+    container.appendChild(card);
+  });
+}
+
+function printPrescription(btn) {
+  const content = btn.closest('div').nextElementSibling.innerHTML;
+  const win = window.open('', '', 'height=700,width=700');
+  win.document.write('<html><head><title>Prescription</title>');
+  win.document.write('<style>body{font-family:sans-serif; padding:2rem;} ul{padding-left:1.5rem;}</style>');
+  win.document.write('</head><body>');
+  win.document.write('<h2 style="border-bottom:2px solid #ccc; padding-bottom:10px; margin-top:0;">MediCare Prescription Record</h2>');
+  win.document.write(content);
+  win.document.write('</body></html>');
+  win.document.close();
+  setTimeout(() => { win.print(); }, 500);
 }
 
 // Call on initial load
