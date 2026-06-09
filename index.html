@@ -539,7 +539,7 @@
       <p id="login-error" style="color:var(--coral-600);font-size:0.82rem;margin-bottom:0.8rem;display:none;">Invalid credentials.</p>
       <button class="btn btn-primary" onclick="doLogin()">Sign In</button>
       <p style="text-align:center; font-size:0.85rem; margin-top:1rem; color:var(--text-sec);">
-        Don't have an account? <a href="#" onclick="showPage('signup')" style="color:var(--teal-600); text-decoration:none; font-weight:500;">Create Account</a>
+        If account is not there, <a href="#" onclick="showPage('signup')" style="color:var(--teal-600); text-decoration:none; font-weight:500;">Create Account</a>
       </p>
     </div>
   </div>
@@ -709,7 +709,8 @@ const MockDB = {
   login: function(req) {
     const data = this.load();
     const user = data.users[req.username];
-    if (!user || user.password !== req.password) return { error: 'Invalid credentials.' };
+    if (!user) return { error: 'Account not there. Please create an account.' };
+    if (user.password !== req.password) return { error: 'Invalid credentials.' };
     return { user };
   },
   getUsers: function() { return this.load().users; },
