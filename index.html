@@ -536,8 +536,9 @@
           </div>
         </div>
       </div>
-      <div class="contact-box" style="padding: 1.5rem;">
-        <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3022.1422937950147!2d-73.98731968459391!3d40.75889497932681!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x89c25855c6480299%3A0x55194ec5a1ae072e!2sTimes+Square!5e0!3m2!1sen!2sus!4v1560412581423!5m2!1sen!2sus" width="100%" height="300" style="border:0; border-radius:12px;" allowfullscreen="" loading="lazy"></iframe>
+      <div class="contact-box" style="padding: 1.5rem; display:flex; flex-direction:column; gap:1.5rem;">
+        <img src="images/patient_care.png" alt="Patient Care" style="width:100%; border-radius:12px; object-fit:cover; height:200px; box-shadow:0 4px 12px rgba(0,0,0,0.05);">
+        <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3022.1422937950147!2d-73.98731968459391!3d40.75889497932681!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x89c25855c6480299%3A0x55194ec5a1ae072e!2sTimes+Square!5e0!3m2!1sen!2sus!4v1560412581423!5m2!1sen!2sus" width="100%" height="250" style="border:0; border-radius:12px;" allowfullscreen="" loading="lazy"></iframe>
       </div>
     </div>
   </div>
@@ -776,19 +777,11 @@
       <input type="hidden" id="book-doctor-id" value="">
       <div class="form-group">
         <label>Username</label>
-        <input type="text" id="bookingUsername" placeholder="Enter your username" style="border: 1px solid var(--border); padding:12px 16px; border-radius:10px; width:100%; font-family:'DM Sans', sans-serif; font-size:0.95rem;">
+        <input type="text" id="bookingUsername" placeholder="Your Name" style="border: 1px solid var(--border); padding:12px 16px; border-radius:10px; width:100%; font-family:'DM Sans', sans-serif; font-size:0.95rem;">
       </div>
       <div class="form-group">
         <label>Selected Service</label>
-        <input type="text" id="bookingService" readonly style="background:#f1f5f9; cursor:not-allowed; border: 1px solid var(--border); padding:12px 16px; border-radius:10px; width:100%; font-family:'DM Sans', sans-serif; font-size:0.95rem;">
-      </div>
-      <div class="form-group">
-        <label>Patient Contact Phone</label>
-        <input type="text" id="bookingPhone" placeholder="e.g. +1 (555) 123-4567" style="border: 1px solid var(--border); padding:12px 16px; border-radius:10px; width:100%; font-family:'DM Sans', sans-serif; font-size:0.95rem;">
-      </div>
-      <div class="form-group">
-        <label>Kind of Treatment / Symptoms</label>
-        <textarea id="bookingReason" placeholder="Describe your symptoms or the kind of treatment you are seeking..." style="width:100%; padding:12px 16px; border:1px solid var(--border); border-radius:10px; font-family:'DM Sans', sans-serif; font-size:0.95rem; resize:vertical; min-height:80px;"></textarea>
+        <input type="text" id="bookingService" placeholder="Service Name" style="border: 1px solid var(--border); padding:12px 16px; border-radius:10px; width:100%; font-family:'DM Sans', sans-serif; font-size:0.95rem;">
       </div>
       <div class="form-group">
         <label>Preferred Date</label>
@@ -796,11 +789,15 @@
       </div>
       <div class="form-group">
         <label>Time Slot</label>
-        <select id="bookingTime" style="width:100%; padding:12px 16px; border:1px solid var(--border); border-radius:10px; font-family:'DM Sans', sans-serif; font-size:1rem; outline:none; background:white;">
-          <option value="Morning (9 AM - 12 PM)">Morning (9 AM - 12 PM)</option>
-          <option value="Afternoon (1 PM - 4 PM)">Afternoon (1 PM - 4 PM)</option>
-          <option value="Evening (5 PM - 8 PM)">Evening (5 PM - 8 PM)</option>
-        </select>
+        <input type="time" id="bookingTime" style="width:100%; padding:12px 16px; border:1px solid var(--border); border-radius:10px; font-family:'DM Sans', sans-serif; font-size:1rem; outline:none; background:white;">
+      </div>
+      <div class="form-group">
+        <label>Patient Contact Phone</label>
+        <input type="text" id="bookingPhone" placeholder="Phone Number" style="border: 1px solid var(--border); padding:12px 16px; border-radius:10px; width:100%; font-family:'DM Sans', sans-serif; font-size:0.95rem;">
+      </div>
+      <div class="form-group">
+        <label>Kind of Treatment / Symptoms</label>
+        <textarea id="bookingReason" placeholder="Reason" style="width:100%; padding:12px 16px; border:1px solid var(--border); border-radius:10px; font-family:'DM Sans', sans-serif; font-size:0.95rem; resize:vertical; min-height:80px;"></textarea>
       </div>
     </div>
     <div class="modal-footer">
@@ -880,7 +877,7 @@ async function renderDoctorsGrid() {
   }
   
   filteredDoctors.forEach(doc => {
-    let avatarHTML = `<div class="doc-avatar">${doc.initials}</div>`;
+    let avatarHTML = `<div class="doc-avatar" style="padding:0; overflow:hidden;"><img src="images/doctor_portrait.png" alt="Doctor" style="width:100%; height:100%; object-fit:cover;"></div>`;
 
     const docCard = `
       <div class="doc-card">
@@ -1371,20 +1368,18 @@ function closeBookingModal() {
 }
 
 async function submitBooking() {
-  const doctorId = document.getElementById('book-doctor-id').value; // Keep doctor connection working
 
   const bookingData = {
     username: document.getElementById("bookingUsername").value,
-    doctorId: doctorId || null,
     service: document.getElementById("bookingService").value,
     date: document.getElementById("bookingDate").value,
     time: document.getElementById("bookingTime").value,
     phone: document.getElementById("bookingPhone").value,
-    reason: document.getElementById("bookingReason").value,
-    status: 'Confirmed'
+    reason: document.getElementById("bookingReason").value
   };
 
   try {
+
     const response = await fetch('/api/bookings', {
       method: 'POST',
       headers: {
@@ -1397,10 +1392,6 @@ async function submitBooking() {
 
     if(response.ok) {
       alert("Booking Successful!");
-      closeBookingModal();
-      if (document.getElementById('page-settings').style.display === 'block') {
-        renderBookings();
-      }
     } else {
       alert(data.error || "Booking Failed");
     }
@@ -1409,6 +1400,7 @@ async function submitBooking() {
     console.log(error);
     alert("Server Error");
   }
+
 }
 
 async function renderBookings() {
