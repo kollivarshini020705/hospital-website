@@ -706,24 +706,28 @@
       <div id="booking-success" style="display:none; background:var(--teal-50); color:var(--teal-700); padding:12px; border-radius:8px; margin-bottom:1.5rem; font-size:0.9rem; font-weight:500;">Slot booked successfully! You can view it in your Settings.</div>
       <input type="hidden" id="book-doctor-id" value="">
       <div class="form-group">
+        <label>Username</label>
+        <input type="text" id="bookingUsername" placeholder="Enter your username" style="border: 1px solid var(--border); padding:12px 16px; border-radius:10px; width:100%; font-family:'DM Sans', sans-serif; font-size:0.95rem;">
+      </div>
+      <div class="form-group">
         <label>Selected Service</label>
-        <input type="text" id="book-service-name" readonly style="background:#f1f5f9; cursor:not-allowed; border: 1px solid var(--border); padding:12px 16px; border-radius:10px; width:100%; font-family:'DM Sans', sans-serif; font-size:0.95rem;">
+        <input type="text" id="bookingService" readonly style="background:#f1f5f9; cursor:not-allowed; border: 1px solid var(--border); padding:12px 16px; border-radius:10px; width:100%; font-family:'DM Sans', sans-serif; font-size:0.95rem;">
       </div>
       <div class="form-group">
         <label>Patient Contact Phone</label>
-        <input type="text" id="book-patient-phone" placeholder="e.g. +1 (555) 123-4567" style="border: 1px solid var(--border); padding:12px 16px; border-radius:10px; width:100%; font-family:'DM Sans', sans-serif; font-size:0.95rem;">
+        <input type="text" id="bookingPhone" placeholder="e.g. +1 (555) 123-4567" style="border: 1px solid var(--border); padding:12px 16px; border-radius:10px; width:100%; font-family:'DM Sans', sans-serif; font-size:0.95rem;">
       </div>
       <div class="form-group">
         <label>Kind of Treatment / Symptoms</label>
-        <textarea id="book-treatment-reason" placeholder="Describe your symptoms or the kind of treatment you are seeking..." style="width:100%; padding:12px 16px; border:1px solid var(--border); border-radius:10px; font-family:'DM Sans', sans-serif; font-size:0.95rem; resize:vertical; min-height:80px;"></textarea>
+        <textarea id="bookingReason" placeholder="Describe your symptoms or the kind of treatment you are seeking..." style="width:100%; padding:12px 16px; border:1px solid var(--border); border-radius:10px; font-family:'DM Sans', sans-serif; font-size:0.95rem; resize:vertical; min-height:80px;"></textarea>
       </div>
       <div class="form-group">
         <label>Preferred Date</label>
-        <input type="date" id="book-date" style="border: 1px solid var(--border); padding:12px 16px; border-radius:10px; width:100%; font-family:'DM Sans', sans-serif; font-size:0.95rem;">
+        <input type="date" id="bookingDate" style="border: 1px solid var(--border); padding:12px 16px; border-radius:10px; width:100%; font-family:'DM Sans', sans-serif; font-size:0.95rem;">
       </div>
       <div class="form-group">
         <label>Time Slot</label>
-        <select id="book-time" style="width:100%; padding:12px 16px; border:1px solid var(--border); border-radius:10px; font-family:'DM Sans', sans-serif; font-size:1rem; outline:none; background:white;">
+        <select id="bookingTime" style="width:100%; padding:12px 16px; border:1px solid var(--border); border-radius:10px; font-family:'DM Sans', sans-serif; font-size:1rem; outline:none; background:white;">
           <option value="Morning (9 AM - 12 PM)">Morning (9 AM - 12 PM)</option>
           <option value="Afternoon (1 PM - 4 PM)">Afternoon (1 PM - 4 PM)</option>
           <option value="Evening (5 PM - 8 PM)">Evening (5 PM - 8 PM)</option>
@@ -732,7 +736,7 @@
     </div>
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeBookingModal()">Close</button>
-      <button class="btn btn-primary" onclick="submitServiceBooking()">Confirm Booking</button>
+      <button class="btn btn-primary" onclick="submitBooking()">Confirm Booking</button>
     </div>
   </div>
 </div>
@@ -1238,57 +1242,56 @@ function openBookingModal(serviceName, doctorId = null) {
   }
   document.getElementById('booking-modal').classList.add('active');
   document.getElementById('booking-success').style.display = 'none';
-  document.getElementById('book-service-name').value = serviceName;
+  document.getElementById('bookingUsername').value = currentUser;
+  document.getElementById('bookingService').value = serviceName;
   document.getElementById('book-doctor-id').value = doctorId || '';
-  document.getElementById('book-date').value = new Date().toISOString().split('T')[0];
-  document.getElementById('book-patient-phone').value = USERS[currentUser]?.phone || '';
-  document.getElementById('book-treatment-reason').value = '';
+  document.getElementById('bookingDate').value = new Date().toISOString().split('T')[0];
+  document.getElementById('bookingPhone').value = USERS[currentUser]?.phone || '';
+  document.getElementById('bookingReason').value = '';
 }
 
 function closeBookingModal() {
   document.getElementById('booking-modal').classList.remove('active');
 }
 
-async function submitServiceBooking() {
-  const serviceName = document.getElementById('book-service-name').value;
-  const doctorId = document.getElementById('book-doctor-id').value;
-  const date = document.getElementById('book-date').value;
-  const time = document.getElementById('book-time').value;
-  const phone = document.getElementById('book-patient-phone').value;
-  const reason = document.getElementById('book-treatment-reason').value;
-  
-  if (!date) return;
-  
+async function submitBooking() {
+  const doctorId = document.getElementById('book-doctor-id').value; // Keep doctor connection working
+
+  const bookingData = {
+    username: document.getElementById("bookingUsername").value,
+    doctorId: doctorId || null,
+    service: document.getElementById("bookingService").value,
+    date: document.getElementById("bookingDate").value,
+    time: document.getElementById("bookingTime").value,
+    phone: document.getElementById("bookingPhone").value,
+    reason: document.getElementById("bookingReason").value,
+    status: 'Confirmed'
+  };
+
   try {
     const response = await fetch('/api/bookings', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        username: currentUser,
-        doctorId: doctorId || null,
-        service: serviceName,
-        date: date,
-        time: time,
-        phone: phone,
-        reason: reason,
-        status: 'Confirmed'
-      })
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(bookingData)
     });
-    
-    if (response.ok) {
-      document.getElementById('booking-success').style.display = 'block';
-      setTimeout(() => {
-        closeBookingModal();
-        if (document.getElementById('page-settings').style.display === 'block') {
-          renderBookings(); // refresh if already on settings
-        }
-      }, 2000);
+
+    const data = await response.json();
+
+    if(response.ok) {
+      alert("Booking Successful!");
+      closeBookingModal();
+      if (document.getElementById('page-settings').style.display === 'block') {
+        renderBookings();
+      }
     } else {
-      alert("Failed to create booking.");
+      alert(data.error || "Booking Failed");
     }
-  } catch (e) {
-    console.error("Booking error:", e);
-    alert("Error connecting to server. Is the backend running?");
+
+  } catch(error) {
+    console.log(error);
+    alert("Server Error");
   }
 }
 
