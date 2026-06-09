@@ -181,9 +181,9 @@ app.post('/api/bookings', async (req, res) => {
     const newBooking = new Booking({ ...req.body, status: 'Confirmed' });
     await newBooking.save();
 
-    if (newBooking.doctorId && connectedUsers[newBooking.doctorId]) {
-      io.to(connectedUsers[newBooking.doctorId]).emit('newBooking', newBooking);
-    }
+    // Broadcast the new booking globally for real-time dashboard sync
+    io.emit('newBooking', newBooking);
+
     res.status(201).json(newBooking);
   } catch (error) {
     res.status(500).json({ error: error.message });
