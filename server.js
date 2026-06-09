@@ -120,6 +120,24 @@ app.get('/api/conversations/:username', (req, res) => {
   }
 });
 
+app.post('/api/conversations', (req, res) => {
+  try {
+    const { participants } = req.body;
+    let existing = db.conversations.find(c => 
+      c.participants.includes(participants[0]) && c.participants.includes(participants[1])
+    );
+    if (existing) {
+      return res.json(existing);
+    }
+    const newConv = { _id: uuid(), participants };
+    db.conversations.push(newConv);
+    saveDB();
+    res.status(201).json(newConv);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.post('/api/messages', (req, res) => {
   try {
     const newMsg = { ...req.body, _id: uuid() };
