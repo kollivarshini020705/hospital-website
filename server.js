@@ -49,6 +49,18 @@ const messageSchema = new mongoose.Schema({
 });
 const Message = mongoose.model('Message', messageSchema);
 
+const bookingSchema = new mongoose.Schema({
+  username: { type: String, required: true },
+  doctorId: { type: String, default: null },
+  service: { type: String, required: true },
+  date: { type: String, required: true },
+  time: { type: String, required: true },
+  phone: { type: String },
+  reason: { type: String },
+  status: { type: String, default: 'Confirmed' }
+});
+const Booking = mongoose.model('Booking', bookingSchema);
+
 // API Routes
 app.post('/api/signup', async (req, res) => {
   try {
@@ -116,6 +128,28 @@ app.post('/api/messages', async (req, res) => {
     const newMsg = new Message(req.body);
     await newMsg.save();
     res.status(201).json(newMsg);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/bookings', async (req, res) => {
+  try {
+    const newBooking = new Booking(req.body);
+    await newBooking.save();
+    res.status(201).json(newBooking);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/bookings/:username', async (req, res) => {
+  try {
+    const { username } = req.params;
+    const bookings = await Booking.find({
+      $or: [{ username: username }, { doctorId: username }]
+    });
+    res.json(bookings);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

@@ -1260,7 +1260,7 @@ function closeBookingModal() {
   document.getElementById('booking-modal').classList.remove('active');
 }
 
-function submitServiceBooking() {
+async function submitServiceBooking() {
   const serviceName = document.getElementById('book-service-name').value;
   const doctorId = document.getElementById('book-doctor-id').value;
   const date = document.getElementById('book-date').value;
@@ -1270,56 +1270,82 @@ function submitServiceBooking() {
   
   if (!date) return;
   
-  MockDB.addBooking({
-    username: currentUser,
-    doctorId: doctorId || null,
-    service: serviceName,
-    date: date,
-    time: time,
-    phone: phone,
-    reason: reason,
-    status: 'Confirmed'
-  });
-  
-  document.getElementById('booking-success').style.display = 'block';
-  setTimeout(() => {
-    closeBookingModal();
-  }, 2000);
+  try {
+    const response = await fetch('/api/bookings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        username: currentUser,
+        doctorId: doctorId || null,
+        service: serviceName,
+        date: date,
+        time: time,
+        phone: phone,
+        reason: reason,
+        status: 'Confirmed'
+      })
+    });
+    
+    if (response.ok) {
+      document.getElementById('booking-success').style.display = 'block';
+      setTimeout(() => {
+        closeBookingModal();
+        if (document.getElementById('page-settings').style.display === 'block') {
+          renderBookings(); // refresh if already on settings
+        }
+      }, 2000);
+    } else {
+      alert("Failed to create booking.");
+    }
+  } catch (e) {
+    console.error("Booking error:", e);
+    alert("Error connecting to server. Is the backend running?");
+  }
 }
 
-function renderBookings() {
+async function renderBookings() {
   const container = document.getElementById('bookings-list');
   if (!container) return;
   
-  const bookings = MockDB.getBookings(currentUser);
-  if (bookings.length === 0) {
-    container.innerHTML = '<p style="color:var(--text-sec); font-size:0.95rem;">You have no upcoming appointments or bookings.</p>';
-    return;
-  }
+  container.innerHTML = '<p style="color:var(--text-sec); font-size:0.95rem;">Loading bookings...</p>';
   
-  container.innerHTML = '';
-  bookings.forEach(b => {
-    let displayName = b.service;
-    if (b.doctorId === currentUser) {
-      const patient = USERS[b.username];
-      displayName = `Appointment with Patient: ${patient ? patient.name : b.username}`;
+  try {
+    const res = await fetch(`/api/bookings/${currentUser}`);
+    if (!res.ok) throw new Error("Failed to fetch bookings");
+    const bookings = await res.json();
+    
+    if (bookings.length === 0) {
+      container.innerHTML = '<p style="color:var(--text-sec); font-size:0.95rem;">You have no upcoming appointments or bookings.</p>';
+      return;
     }
-    const extraInfo = [];
-    if (b.phone) extraInfo.push(`📞 ${b.phone}`);
-    if (b.reason) extraInfo.push(`📝 Reason: ${b.reason}`);
-    const extraHTML = extraInfo.length ? `<div style="font-size:0.85rem; color:var(--text-sec); margin-top:0.4rem; padding-top:0.4rem; border-top:1px solid #e2e8f0;">${extraInfo.join('<br>')}</div>` : '';
+    
+    container.innerHTML = '';
+    bookings.forEach(b => {
+      let displayName = b.service;
+      if (b.doctorId === currentUser) {
+        const patient = USERS[b.username];
+        displayName = `Appointment with Patient: ${patient ? patient.name : b.username}`;
+      }
+      const extraInfo = [];
+      if (b.phone) extraInfo.push(`📞 ${b.phone}`);
+      if (b.reason) extraInfo.push(`📝 Reason: ${b.reason}`);
+      const extraHTML = extraInfo.length ? `<div style="font-size:0.85rem; color:var(--text-sec); margin-top:0.4rem; padding-top:0.4rem; border-top:1px solid #e2e8f0;">${extraInfo.join('<br>')}</div>` : '';
 
-    container.innerHTML += `
-      <div style="padding:1rem; border:1px solid var(--border); border-radius:12px; background:#f8fafc; display:flex; justify-content:space-between; align-items:flex-start;">
-        <div style="flex:1; margin-right:1rem;">
-          <h4 style="color:var(--teal-900); margin-bottom:0.25rem;">${displayName}</h4>
-          <div style="font-size:0.85rem; color:var(--text-sec);">🗓 ${b.date} &nbsp;|&nbsp; 🕒 ${b.time}</div>
-          ${extraHTML}
+      container.innerHTML += `
+        <div style="padding:1rem; border:1px solid var(--border); border-radius:12px; background:#f8fafc; display:flex; justify-content:space-between; align-items:flex-start;">
+          <div style="flex:1; margin-right:1rem;">
+            <h4 style="color:var(--teal-900); margin-bottom:0.25rem;">${displayName}</h4>
+            <div style="font-size:0.85rem; color:var(--text-sec);">🗓 ${b.date} &nbsp;|&nbsp; 🕒 ${b.time}</div>
+            ${extraHTML}
+          </div>
+          <span style="padding:4px 12px; background:var(--teal-100); color:var(--teal-800); border-radius:20px; font-size:0.8rem; font-weight:600; white-space:nowrap;">${b.status}</span>
         </div>
-        <span style="padding:4px 12px; background:var(--teal-100); color:var(--teal-800); border-radius:20px; font-size:0.8rem; font-weight:600; white-space:nowrap;">${b.status}</span>
-      </div>
-    `;
-  });
+      `;
+    });
+  } catch (e) {
+    console.error(e);
+    container.innerHTML = '<p style="color:var(--red-600); font-size:0.95rem;">Error loading bookings. Is the backend running?</p>';
+  }
 }
 
 // Call on initial load
