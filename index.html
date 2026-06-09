@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MediCare Hospital — Doctor-Patient Portal</title>
 <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="/socket.io/socket.io.js"></script>
 <style>
   :root {
     --teal-50: #E1F5EE; --teal-100: #9FE1CB; --teal-400: #1D9E75; --teal-600: #0F6E56; --teal-800: #085041; --teal-900: #04342C;
@@ -853,6 +854,53 @@ let CONVERSATIONS = {};
 let currentUser = null;
 let currentConv = null;
 let signupRole = 'patient';
+let socket = null;
+
+function initSocket() {
+  if(socket) socket.disconnect();
+  socket = io();
+  socket.emit('join', currentUser);
+  
+  socket.on('newMessage', (msg) => {
+    // If we're currently viewing the conversation where the message belongs
+    if (currentConv === msg.conversationId) {
+      // Append to UI dynamically
+      const msgList = document.getElementById('message-list');
+      if (msgList) {
+        let align = msg.from === currentUser ? 'right' : 'left';
+        let bg = msg.from === currentUser ? 'var(--teal-600)' : 'white';
+        let color = msg.from === currentUser ? 'white' : 'var(--text)';
+        
+        let extraHTML = '';
+        if (msg.type === 'prescription') {
+          extraHTML = `
+            <div style="margin-top:0.5rem; padding-top:0.5rem; border-top:1px solid rgba(255,255,255,0.2);">
+              <strong style="display:block; margin-bottom:4px; font-size:0.85rem;">Diagnosis:</strong> ${msg.diagnosis}<br>
+              <strong style="display:block; margin-top:4px; margin-bottom:4px; font-size:0.85rem;">Rx:</strong> ${msg.medicines.join(', ')}<br>
+              <strong style="display:block; margin-top:4px; margin-bottom:4px; font-size:0.85rem;">Diet:</strong> ${msg.diet}
+            </div>
+          `;
+        }
+
+        const msgDiv = document.createElement('div');
+        msgDiv.style.cssText = `margin-bottom:1rem; text-align:${align};`;
+        msgDiv.innerHTML = `
+          <div style="display:inline-block; max-width:70%; background:${bg}; color:${color}; padding:10px 14px; border-radius:12px; text-align:left; font-size:0.95rem; box-shadow:0 2px 5px rgba(0,0,0,0.05); line-height:1.5;">
+            ${msg.text || ''}
+            ${extraHTML}
+            <div style="font-size:0.75rem; margin-top:4px; opacity:0.8; text-align:right;">${msg.time}</div>
+          </div>
+        `;
+        msgList.appendChild(msgDiv);
+        msgList.scrollTop = msgList.scrollHeight;
+      }
+    } else {
+      // Show notification if it's not the active conversation
+      alert("New message received from " + msg.from);
+      renderChatList(); // Refresh sidebar to show updated latest message
+    }
+  });
+}
 
 async function fetchInitialData() {
   if (!currentUser) return;
@@ -1012,6 +1060,7 @@ async function doLogin() {
       err.style.display = 'none';
       currentUser = u;
       
+      initSocket();
       await fetchInitialData();
       setupPortal();
       updateAuthUI(true);
@@ -1041,6 +1090,10 @@ function updateAuthUI(isLoggedIn) {
 }
 
 function doLogout() {
+  if (socket) {
+    socket.disconnect();
+    socket = null;
+  }
   currentUser = null;
   currentConv = null;
   document.getElementById('login-user').value = '';
@@ -1225,12 +1278,7 @@ async function sendMessage() {
   const msgData = { conversationId: currentConv, from: currentUser, type: 'text', text, time };
   
   try {
-    await fetch('/api/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(msgData)
-    });
-    await refreshChat();
+    socket.emit('sendMessage', msgData);
     input.value = '';
   } catch(e) {
     console.error(e);
@@ -1271,12 +1319,7 @@ async function sendPrescription() {
   const msgData = { conversationId: currentConv, from: currentUser, type: 'prescription', diagnosis, medicines, diet, reports, notes, time };
 
   try {
-    await fetch('/api/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(msgData)
-    });
-    await refreshChat();
+    socket.emit('sendMessage', msgData);
     closeRxModal();
   } catch(e) {
     console.error(e);

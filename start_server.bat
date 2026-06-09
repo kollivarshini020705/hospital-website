@@ -17,10 +17,8 @@ if %errorlevel% neq 0 (
     exit /b
 )
 
-IF NOT EXIST "node_modules" (
-    echo Installing required packages (this may take a minute)...
-    call npm install
-)
+echo Installing required packages (this may take a minute)...
+call npm install
 
 echo.
 echo Starting the server...

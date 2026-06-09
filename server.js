@@ -2,8 +2,12 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const path = require('path');
+const http = require('http');
+const { Server } = require('socket.io');
 
 const app = express();
+const server = http.createServer(app);
+const io = new Server(server, { cors: { origin: '*' } });
 const PORT = process.env.PORT || 3000;
 
 app.use(cors());
@@ -217,8 +221,43 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-app.listen(PORT, () => {
+// --- Socket.IO Real-Time Logic ---
+const connectedUsers = {}; // username -> socket.id
+
+io.on('connection', (socket) => {
+  socket.on('join', (username) => {
+    connectedUsers[username] = socket.id;
+  });
+
+  socket.on('sendMessage', async (data) => {
+    try {
+      const newMsg = new Message(data);
+      await newMsg.save();
+      
+      const conv = await Conversation.findById(data.conversationId);
+      if (conv) {
+        const recipient = conv.participants.find(p => p !== data.from);
+        if (recipient && connectedUsers[recipient]) {
+          io.to(connectedUsers[recipient]).emit('newMessage', newMsg);
+        }
+        // Also emit back to sender to confirm it was sent (optional, but good for UI sync)
+        if (connectedUsers[data.from]) {
+          io.to(connectedUsers[data.from]).emit('newMessage', newMsg);
+        }
+      }
+    } catch (e) {
+      console.error('Socket send error:', e);
+    }
+  });
+
+  socket.on('disconnect', () => {
+    const user = Object.keys(connectedUsers).find(k => connectedUsers[k] === socket.id);
+    if (user) delete connectedUsers[user];
+  });
+});
+
+server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
 
-module.exports = app;
+module.exports = server;
