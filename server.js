@@ -3,7 +3,7 @@ const cors = require('cors');
 const path = require('path');
 const http = require('http');
 const { Server } = require('socket.io');
-const fs = require('fs');
+const mongoose = require('mongoose');
 
 const app = express();
 const server = http.createServer(app);
@@ -12,61 +12,94 @@ const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
-// Serve the frontend
 app.use(express.static(path.join(__dirname)));
 
-const DB_FILE = path.join(__dirname, 'db.json');
+// Connect to MongoDB Atlas
+mongoose.connect('mongodb+srv://kollivarshini020705_db_user:hospital123@cluster0.rov2n3t.mongodb.net/medicare?retryWrites=true&w=majority&appName=Cluster0')
+  .then(() => console.log('Connected to MongoDB Atlas'))
+  .catch(err => console.error('MongoDB connection error:', err));
 
-let db = {
-  users: [],
-  conversations: [],
-  messages: [],
-  bookings: [],
-  reviews: []
-};
+// Mongoose Schemas
+const userSchema = new mongoose.Schema({
+  username: { type: String, required: true, unique: true },
+  password: { type: String, required: true },
+  role: String,
+  name: String,
+  initials: String,
+  specialty: String,
+  bio: String,
+  phone: String,
+  email: String
+});
+const User = mongoose.model('User', userSchema);
 
-// Load DB
-if (fs.existsSync(DB_FILE)) {
-  try {
-    db = JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
-  } catch(e) { console.error('Error reading DB:', e); }
-}
+const conversationSchema = new mongoose.Schema({
+  participants: [String]
+});
+const Conversation = mongoose.model('Conversation', conversationSchema);
 
-const saveDB = () => {
-  fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2));
-};
+const messageSchema = new mongoose.Schema({
+  conversationId: String,
+  from: String,
+  text: String,
+  time: String,
+  type: String,
+  diagnosis: String,
+  medicines: [String],
+  diet: String
+});
+const Message = mongoose.model('Message', messageSchema);
 
-function uuid() { return Math.random().toString(36).substring(2, 15); }
+const bookingSchema = new mongoose.Schema({
+  username: String,
+  doctorId: String,
+  service: String,
+  date: String,
+  time: String,
+  phone: String,
+  reason: String,
+  status: { type: String, default: 'Confirmed' }
+});
+const Booking = mongoose.model('Booking', bookingSchema);
+
+const reviewSchema = new mongoose.Schema({
+  name: String,
+  initials: String,
+  text: String
+});
+const Review = mongoose.model('Review', reviewSchema);
+
+// Store active socket connections
+const connectedUsers = {}; // username -> socket.id
 
 // API Routes
-app.post('/api/signup', (req, res) => {
+app.post('/api/signup', async (req, res) => {
   try {
     const { username, password, role, name, specialty } = req.body;
     
-    if (db.users.find(u => u.username === username)) {
-      return res.status(400).json({ error: 'Username already exists.' });
+    const existing = await User.findOne({ username });
+    if (existing) return res.status(400).json({ error: 'Username already exists.' });
+
+    const initials = name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() || 'U';
+    const newUser = new User({ username, password, role, name, initials, specialty });
+    await newUser.save();
+
+    const otherUsers = await User.find({ role: { $ne: role } });
+    const convsToCreate = otherUsers.map(other => ({ participants: [username, other.username] }));
+    if (convsToCreate.length > 0) {
+      await Conversation.insertMany(convsToCreate);
     }
 
-    const initials = name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
-    const newUser = { username, password, role, name, initials: initials || 'U', specialty, _id: uuid() };
-    db.users.push(newUser);
-
-    const otherUsers = db.users.filter(u => u.role !== role);
-    for (const other of otherUsers) {
-      db.conversations.push({ _id: uuid(), participants: [username, other.username] });
-    }
-
-    saveDB();
     res.status(201).json({ message: 'User created successfully', user: newUser });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-app.post('/api/login', (req, res) => {
+app.post('/api/login', async (req, res) => {
   try {
     const { username, password } = req.body;
-    const user = db.users.find(u => u.username === username && u.password === password);
+    const user = await User.findOne({ username, password });
     if (!user) return res.status(401).json({ error: 'Invalid credentials.' });
     res.json({ message: 'Login successful', user });
   } catch (error) {
@@ -74,10 +107,11 @@ app.post('/api/login', (req, res) => {
   }
 });
 
-app.get('/api/users', (req, res) => {
+app.get('/api/users', async (req, res) => {
   try {
+    const users = await User.find().lean();
     const usersObj = {};
-    db.users.forEach(u => {
+    users.forEach(u => {
       const { password, ...safeUser } = u;
       safeUser.isOnline = !!connectedUsers[u.username];
       usersObj[u.username] = safeUser;
@@ -88,14 +122,12 @@ app.get('/api/users', (req, res) => {
   }
 });
 
-app.put('/api/users/:username', (req, res) => {
+app.put('/api/users/:username', async (req, res) => {
   try {
     const { username } = req.params;
-    let idx = db.users.findIndex(u => u.username === username);
-    if (idx !== -1) {
-      db.users[idx] = { ...db.users[idx], ...req.body };
-      saveDB();
-      res.json(db.users[idx]);
+    const user = await User.findOneAndUpdate({ username }, req.body, { new: true }).lean();
+    if (user) {
+      res.json(user);
     } else {
       res.status(404).json({ error: 'User not found' });
     }
@@ -104,14 +136,14 @@ app.put('/api/users/:username', (req, res) => {
   }
 });
 
-app.get('/api/conversations/:username', (req, res) => {
+app.get('/api/conversations/:username', async (req, res) => {
   try {
     const { username } = req.params;
-    const convs = db.conversations.filter(c => c.participants.includes(username));
+    const convs = await Conversation.find({ participants: username }).lean();
     
     const convObj = {};
     for (let c of convs) {
-      const messages = db.messages.filter(m => m.conversationId === c._id);
+      const messages = await Message.find({ conversationId: c._id.toString() }).lean();
       convObj[c._id] = { _id: c._id, participants: c.participants, messages: messages };
     }
     res.json(convObj);
@@ -120,94 +152,91 @@ app.get('/api/conversations/:username', (req, res) => {
   }
 });
 
-app.post('/api/conversations', (req, res) => {
+app.post('/api/conversations', async (req, res) => {
   try {
     const { participants } = req.body;
-    let existing = db.conversations.find(c => 
-      c.participants.includes(participants[0]) && c.participants.includes(participants[1])
-    );
-    if (existing) {
-      return res.json(existing);
-    }
-    const newConv = { _id: uuid(), participants };
-    db.conversations.push(newConv);
-    saveDB();
+    let existing = await Conversation.findOne({ participants: { $all: participants, $size: participants.length } });
+    if (existing) return res.json(existing);
+    
+    const newConv = new Conversation({ participants });
+    await newConv.save();
     res.status(201).json(newConv);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-app.post('/api/messages', (req, res) => {
+app.post('/api/messages', async (req, res) => {
   try {
-    const newMsg = { ...req.body, _id: uuid() };
-    db.messages.push(newMsg);
-    saveDB();
+    const newMsg = new Message(req.body);
+    await newMsg.save();
     res.status(201).json(newMsg);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-app.post('/api/bookings', (req, res) => {
+app.post('/api/bookings', async (req, res) => {
   try {
-    const newBooking = { ...req.body, status: 'Confirmed', _id: uuid() };
-    db.bookings.push(newBooking);
-    saveDB();
+    const newBooking = new Booking({ ...req.body, status: 'Confirmed' });
+    await newBooking.save();
 
     if (newBooking.doctorId && connectedUsers[newBooking.doctorId]) {
       io.to(connectedUsers[newBooking.doctorId]).emit('newBooking', newBooking);
     }
-
     res.status(201).json(newBooking);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-app.get('/api/admin/bookings', (req, res) => {
-  res.json(db.bookings);
+app.get('/api/admin/bookings', async (req, res) => {
+  try {
+    const bookings = await Booking.find().lean();
+    res.json(bookings);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
-app.put('/api/admin/bookings/:id', (req, res) => {
+app.put('/api/admin/bookings/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const idx = db.bookings.findIndex(b => b._id === id);
-    if (idx !== -1) {
-      db.bookings[idx].status = req.body.status;
-      saveDB();
-      res.json(db.bookings[idx]);
-    } else {
-      res.status(404).json({ error: 'Not found' });
-    }
+    const updated = await Booking.findByIdAndUpdate(id, { status: req.body.status }, { new: true });
+    if (updated) res.json(updated);
+    else res.status(404).json({ error: 'Not found' });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-app.get('/api/bookings/:username', (req, res) => {
+app.get('/api/bookings/:username', async (req, res) => {
   try {
     const { username } = req.params;
-    const bookings = db.bookings.filter(b => b.username === username || b.doctorId === username);
+    const bookings = await Booking.find({ $or: [{ username: username }, { doctorId: username }] }).lean();
     res.json(bookings);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-app.post('/api/reviews', (req, res) => {
+app.post('/api/reviews', async (req, res) => {
   try {
-    const newReview = { ...req.body, _id: uuid() };
-    db.reviews.push(newReview);
-    saveDB();
+    const newReview = new Review(req.body);
+    await newReview.save();
     res.status(201).json(newReview);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-app.get('/api/reviews', (req, res) => {
-  res.json(db.reviews);
+app.get('/api/reviews', async (req, res) => {
+  try {
+    const reviews = await Review.find().lean();
+    res.json(reviews);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 app.get('/', (req, res) => {
@@ -215,26 +244,22 @@ app.get('/', (req, res) => {
 });
 
 // --- Socket.IO Real-Time Logic ---
-const connectedUsers = {}; // username -> socket.id
-
 io.on('connection', (socket) => {
   socket.on('join', (username) => {
     connectedUsers[username] = socket.id;
   });
 
-  socket.on('sendMessage', (data) => {
+  socket.on('sendMessage', async (data) => {
     try {
-      const newMsg = { ...data, _id: uuid() };
-      db.messages.push(newMsg);
-      saveDB();
+      const newMsg = new Message(data);
+      await newMsg.save();
       
-      const conv = db.conversations.find(c => c._id === data.conversationId);
+      const conv = await Conversation.findById(data.conversationId);
       if (conv) {
         const recipient = conv.participants.find(p => p !== data.from);
         if (recipient && connectedUsers[recipient]) {
           io.to(connectedUsers[recipient]).emit('newMessage', newMsg);
         }
-        // Also emit back to sender to confirm it was sent (optional, but good for UI sync)
         if (connectedUsers[data.from]) {
           io.to(connectedUsers[data.from]).emit('newMessage', newMsg);
         }
