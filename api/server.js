@@ -217,10 +217,6 @@ app.post('/api/messages', async (req, res) => {
     
     const conv = await Conversation.findById(req.body.conversationId);
     if (conv) {
-      conv.messages.push(newMsg);
-      conv.lastUpdated = new Date();
-      await conv.save();
-      
       // We still emit for local dev, but Vercel clients rely on polling
       const recipient = conv.participants.find(p => p !== req.body.from);
       if (recipient && connectedUsers[recipient]) {
@@ -341,19 +337,213 @@ io.on('connection', (socket) => {
   });
 
   socket.on('disconnect', () => {
-    const user = Object.keys(connectedUsers).find(k => connectedUsers[k] === socket.id);
+      const user = Object.keys(connectedUsers).find(k => connectedUsers[k] === socket.id);
     if (user) delete connectedUsers[user];
   });
 });
 
+// --- HealthBot Groq API Call ---
+async function callGroqChatCompletions(groqMessages) {
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey) {
+    throw new Error("GROQ_API_KEY not configured in environment.");
+  }
+
+  // List of models to try in order of preference
+  const models = ["llama-3.3-70b-versatile", "llama3-8b-8192"];
+  let lastError = null;
+
+  for (const model of models) {
+    try {
+      console.log(`Attempting Groq completion using model: ${model}`);
+      const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${apiKey}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          model: model,
+          messages: groqMessages,
+          temperature: 0.7,
+          max_tokens: 1024
+        })
+      });
+
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(`Groq API returned ${res.status}: ${errText}`);
+      }
+
+      const data = await res.json();
+      if (data.choices && data.choices[0] && data.choices[0].message) {
+        return data.choices[0].message.content;
+      } else {
+        throw new Error("Malformed Groq API response structure");
+      }
+    } catch (err) {
+      console.error(`Error with model ${model}:`, err.message);
+      lastError = err;
+    }
+  }
+
+  throw lastError || new Error("Failed to get response from all tried Groq models.");
+}
+
 // --- HealthBot AI Response Engine ---
 async function handleHealthBotResponse(conversationId, patientUsername, userMessage) {
+  let messages;
   try {
-    const messages = await Message.find({ conversationId }).sort({ _id: 1 });
-    const userMessages = messages.filter(m => m.from === patientUsername);
-    const botMessages = messages.filter(m => m.from === 'healthbot');
-    
-    let replyText = "";
+    messages = await Message.find({ conversationId }).sort({ _id: 1 });
+  } catch (err) {
+    console.error("Failed to load message history:", err);
+    return;
+  }
+
+  const userMessages = messages.filter(m => m.from === patientUsername);
+  const botMessages = messages.filter(m => m.from === 'healthbot');
+  let replyText = "";
+  let messageType = "text";
+  let prescriptionFields = {};
+
+  try {
+    // Construct LLM history
+    const systemPrompt = `You are HealthBot, an advanced AI-powered primary care assistant on this healthcare platform. Your role is to act as every patient's first point of contact — like a knowledgeable, empathetic family doctor available 24/7.
+
+ROLE & IDENTITY:
+- You are the patient's primary AI doctor.
+- You handle ALL health concerns first before escalating to human doctors.
+- You are warm, calm, professional, and easy to understand. Take every concern seriously. Never dismiss a patient.
+- Always communicate in the patient's preferred language if possible.
+
+STEP-BY-STEP CONVERSATION OUTLINE:
+1. Patient Intake & History (Step-by-step, do not overwhelm the patient):
+   - Welcome the patient warmly, introduce yourself, and ask for their basic details: full name, age, and gender (if not already known).
+   - Ask them to describe their main symptoms: what they are, when they started, severity (scale of 1 to 10), and what makes it better/worse.
+   - Gather history: allergies, existing medical conditions (like diabetes, hypertension), current medications, or recent lab reports.
+2. Differential Assessment & OTC Recommendations:
+   - Once you have enough context, explain what their symptoms might mean in simple, plain language. Offer 2-3 likely differential diagnoses.
+   - Suggest specific over-the-counter (OTC) medications (e.g. Paracetamol 500mg for fever, Cetirizine 10mg for cold) with dosage instructions.
+   - ALWAYS include this exact disclaimer: "I am an AI, not a human doctor. Consult a professional before starting medications."
+   - Suggest diet, fluid intake, and lifestyle adjustments.
+3. Emergency Triage (Prioritize this if red flags are present):
+   - If chest pain, breathing difficulty, stroke signs, sudden severe pain, loss of consciousness, or poisoning are detected, immediately tell them to call emergency services (108 / 112) or go to the nearest emergency room.
+4. Specialist Booking & Referral:
+   - Suggest booking an appointment with a specialist for a formal check-up.
+   - If the patient agrees to book, or asks for a booking, recommend a specialty and say you will schedule it.
+   - To schedule it, you MUST output the tag [BOOK: <Specialty>] at the very end of your message. Valid specialties are: Cardiology, Dermatology, Orthopedics, General Medicine.
+     - Cardiology (for heart, blood pressure, or chest pain) -> [BOOK: Cardiology]
+     - Dermatology (for skin, hair, or nail concerns) -> [BOOK: Dermatology]
+     - Orthopedics (for joint, bone, or muscle issues) -> [BOOK: Orthopedics]
+     - General Medicine (for other issues, checkups, cold, cough, stomach bugs, etc.) -> [BOOK: General Medicine]
+
+STRUCTURED PRESCRIPTIONS:
+When you provide a differential assessment and OTC recommendation, you should ALSO append a structured prescription block at the end of your response so the portal can render a beautiful Prescription Card:
+[PRESCRIPTION:
+Diagnosis: <Likely condition name>
+Medicines: <Medication 1 with directions>, <Medication 2 with directions>
+Diet: <Diet and lifestyle suggestions>
+Notes: <Any additional advice or follow-up instructions>
+]
+For example, if suggesting paracetamol, format the medicines line as: "Medicines: Paracetamol 500mg (1 tablet every 6 hours as needed for fever)" etc. Multiple medicines should be separated by commas.
+
+Keep your tone professional, empathetic, and warm.`;
+
+    const groqMessages = [{ role: "system", content: systemPrompt }];
+    messages.forEach(msg => {
+      if (msg.from === 'healthbot') {
+        // Strip out any raw prescription block or booking tags from prompt context to avoid confusion
+        let cleanContent = msg.text.replace(/\[PRESCRIPTION:[\s\S]*?\]/gi, '').replace(/\[BOOK:\s*[^\]]+\]/gi, '').trim();
+        groqMessages.push({ role: 'assistant', content: cleanContent });
+      } else {
+        groqMessages.push({ role: 'user', content: msg.text });
+      }
+    });
+
+    // Call Groq API
+    replyText = await callGroqChatCompletions(groqMessages);
+
+    // 1. Process Prescription Block
+    const rxRegex = /\[PRESCRIPTION:([\s\S]*?)\]/i;
+    const rxMatch = replyText.match(rxRegex);
+    if (rxMatch) {
+      messageType = "prescription";
+      const rxContent = rxMatch[1];
+      const lines = rxContent.split('\n');
+      let currentKey = null;
+      let sections = { diagnosis: "", medicines: "", diet: "", notes: "" };
+
+      for (let line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed) continue;
+        if (trimmed.toLowerCase().startsWith("diagnosis:")) {
+          currentKey = "diagnosis";
+          sections.diagnosis = trimmed.substring("diagnosis:".length).trim();
+        } else if (trimmed.toLowerCase().startsWith("medicines:")) {
+          currentKey = "medicines";
+          sections.medicines = trimmed.substring("medicines:".length).trim();
+        } else if (trimmed.toLowerCase().startsWith("diet:")) {
+          currentKey = "diet";
+          sections.diet = trimmed.substring("diet:".length).trim();
+        } else if (trimmed.toLowerCase().startsWith("notes:")) {
+          currentKey = "notes";
+          sections.notes = trimmed.substring("notes:".length).trim();
+        } else if (currentKey) {
+          sections[currentKey] += " " + trimmed;
+        }
+      }
+
+      prescriptionFields.diagnosis = sections.diagnosis.trim() || "General Assessment";
+      prescriptionFields.medicines = sections.medicines.split(',').map(m => m.trim()).filter(Boolean);
+      prescriptionFields.diet = sections.diet.trim();
+      prescriptionFields.notes = sections.notes.trim();
+
+      // Remove the block from the response
+      replyText = replyText.replace(rxRegex, '').trim();
+    }
+
+    // 2. Process Booking Tag
+    const bookRegex = /\[BOOK:\s*([^\]]+)\]/i;
+    const bookMatch = replyText.match(bookRegex);
+    if (bookMatch) {
+      const specialty = bookMatch[1].trim();
+      const doctors = await User.find({ role: 'doctor', username: { $ne: 'healthbot' } });
+      if (doctors.length > 0) {
+        const specialtyMatch = specialty.toLowerCase();
+        let referralDoc = doctors.find(d => d.specialty && d.specialty.toLowerCase().includes(specialtyMatch)) || 
+                          doctors.find(d => d.specialty && specialtyMatch.includes(d.specialty.toLowerCase())) || 
+                          doctors[0];
+                          
+        const bookingId = "BK" + Math.floor(1000 + Math.random() * 9000);
+        const newBooking = new Booking({
+          username: patientUsername,
+          doctorId: referralDoc.username,
+          service: `Appointment with ${referralDoc.name}`,
+          date: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+          time: "10:00 AM",
+          phone: "Not Provided",
+          reason: "Referral from HealthBot AI",
+          status: 'Confirmed'
+        });
+        await newBooking.save();
+        io.emit('newBooking', newBooking);
+
+        const bookingConfirmation = `\n\nYour appointment has been booked! ✓\n` +
+                                    `Doctor: ${referralDoc.name}, ${referralDoc.specialty || 'General Physician'}\n` +
+                                    `Date: ${newBooking.date}\n` +
+                                    `Time: 10:00 AM\n` +
+                                    `Mode: In-person / Video call\n` +
+                                    `Reference: #${bookingId}\n\n` +
+                                    `Please bring your recent reports and ID. Arrive 10 minutes early.`;
+
+        replyText = replyText.replace(bookRegex, '').trim() + bookingConfirmation;
+      } else {
+        replyText = replyText.replace(bookRegex, '').trim() + `\n\n[System Note: We tried to book an appointment with a ${specialty} specialist, but no doctors are registered in this department at the moment. Please consult our directory to book manually.]`;
+      }
+    }
+
+  } catch (err) {
+    console.error("HealthBot Groq API failure, using rule-based fallback:", err);
     const cleanMsg = userMessage.toLowerCase();
     
     // Emergency Red Flags
@@ -374,19 +564,18 @@ async function handleHealthBotResponse(conversationId, patientUsername, userMess
         }
         
         const bookingId = "BK" + Math.floor(1000 + Math.random() * 9000);
-        
-        // Save booking to DB
         const newBooking = new Booking({
           username: patientUsername,
           doctorId: referralDoc.username,
           service: `Appointment with ${referralDoc.name}`,
-          date: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0], // Tomorrow
+          date: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0],
           time: "10:00 AM",
           phone: "Not Provided",
           reason: "Referral from HealthBot AI",
           status: 'Confirmed'
         });
         await newBooking.save();
+        io.emit('newBooking', newBooking);
 
         replyText = `Your appointment has been booked! ✓\n` +
                     `Doctor: ${referralDoc.name}, ${referralDoc.specialty || 'General Physician'}\n` +
@@ -435,31 +624,36 @@ async function handleHealthBotResponse(conversationId, patientUsername, userMess
                   `*Disclaimer: I am an AI health assistant. My guidance is informational and not a substitute for professional medical advice. Always consult a licensed doctor before starting, stopping, or changing any medication.*\n\n` +
                   `I recommend scheduling an appointment with a General Physician for a formal check-up. Would you like me to book an appointment for you?`;
     }
-    
+  }
+
+  try {
     const now = new Date();
     const botMsg = new Message({
       conversationId,
       from: 'healthbot',
-      type: 'text',
+      type: messageType,
       text: replyText,
-      time: now.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})
+      time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      ...prescriptionFields
     });
     
     await botMsg.save();
     
     const conv = await Conversation.findById(conversationId);
     if (conv) {
-      conv.messages.push(botMsg);
-      conv.lastUpdated = now;
-      await conv.save();
-      
       if (connectedUsers[patientUsername]) {
         io.to(connectedUsers[patientUsername]).emit('newMessage', botMsg);
       }
     }
-  } catch (err) {
-    console.error("HealthBot response error:", err);
+  } catch (dbErr) {
+    console.error("Failed to save or broadcast HealthBot response:", dbErr);
   }
 }
 
 module.exports = app;
+
+if (require.main === module) {
+  server.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+}
