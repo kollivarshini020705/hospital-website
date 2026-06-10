@@ -123,6 +123,20 @@ app.get('/api/users', async (req, res) => {
   }
 });
 
+app.post("/api/users", async (req, res) => {
+  try {
+    const user = new User(req.body);
+    await user.save();
+    res.json({
+      message: "User saved successfully"
+    });
+  } catch (err) {
+    res.status(500).json({
+      error: err.message
+    });
+  }
+});
+
 app.put('/api/users/:username', async (req, res) => {
   try {
     const { username } = req.params;
