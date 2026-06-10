@@ -851,6 +851,41 @@
   </div>
 </div>
 
+<!-- VIDEO CONSULTATION MODAL -->
+<div class="modal-overlay" id="meet-modal">
+  <div class="modal" style="max-width: 450px;">
+    <h3>Video Consultation</h3>
+    <p style="font-size:0.9rem; color:var(--text-sec); margin-bottom:1.5rem;">Host a video call with your patient or doctor using Google Meet or our one-click Jitsi call tool.</p>
+    
+    <div style="display:flex; flex-direction:column; gap:1.2rem;">
+      <div style="background:#f8fafc; border:1px solid var(--border); padding:1rem; border-radius:12px; text-align:center;">
+        <h4 style="margin:0 0 6px 0; color:var(--teal-900);">Option 1: One-Click Jitsi Call</h4>
+        <p style="font-size:0.8rem; color:var(--text-sec); margin:0 0 10px 0;">Start an instant video call directly in your browser. No login required.</p>
+        <button class="btn btn-primary btn-sm" onclick="sendMeetLink('jitsi')">Start Instant Call</button>
+      </div>
+
+      <div style="background:#f8fafc; border:1px solid var(--border); padding:1rem; border-radius:12px;">
+        <h4 style="margin:0 0 6px 0; color:#1a73e8; text-align:center;">Option 2: Google Meet</h4>
+        <p style="font-size:0.8rem; color:var(--text-sec); margin:0 0 10px 0; text-align:center;">Create a meeting on Google Meet, copy the link, and paste it below.</p>
+        
+        <div style="text-align:center; margin-bottom:12px;">
+          <a href="https://meet.google.com/new" target="_blank" class="btn btn-sm" style="background:#e8f0fe; color:#1a73e8; text-decoration:none; display:inline-block; border:1px solid #d2e3fc;">+ Create Google Meet Link</a>
+        </div>
+        
+        <div class="form-group" style="margin-bottom:8px;">
+          <label style="font-size:0.8rem;">Paste Google Meet URL</label>
+          <input type="text" id="meet-url-input" placeholder="https://meet.google.com/abc-defg-hij" style="width:100%; padding:8px 12px; border:1px solid var(--border); border-radius:8px; font-size:0.9rem;">
+        </div>
+        <button class="btn btn-primary btn-sm" style="width:100%; background:#1a73e8;" onclick="sendMeetLink('manual')">Share Google Meet Link</button>
+      </div>
+    </div>
+    
+    <div class="modal-footer" style="margin-top:1.5rem; padding-top:1rem; border-top:1px solid var(--border);">
+      <button class="btn btn-outline" onclick="closeMeetModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <!-- BOOKING MODAL -->
 <div id="booking-modal" class="modal-overlay">
   <div class="modal">
@@ -938,38 +973,19 @@ function initSocket() {
   });
   
   socket.on('newMessage', (msg) => {
+    if (CONVERSATIONS[msg.conversationId]) {
+      if (!CONVERSATIONS[msg.conversationId].messages) {
+        CONVERSATIONS[msg.conversationId].messages = [];
+      }
+      const exists = CONVERSATIONS[msg.conversationId].messages.some(m => m._id === msg._id || (m.time === msg.time && m.from === msg.from && m.text === msg.text));
+      if (!exists) {
+        CONVERSATIONS[msg.conversationId].messages.push(msg);
+      }
+    }
+
     // If we're currently viewing the conversation where the message belongs
     if (currentConv === msg.conversationId) {
-      // Append to UI dynamically
-      const msgList = document.getElementById('message-list');
-      if (msgList) {
-        let align = msg.from === currentUser ? 'right' : 'left';
-        let bg = msg.from === currentUser ? 'var(--teal-600)' : 'white';
-        let color = msg.from === currentUser ? 'white' : 'var(--text)';
-        
-        let extraHTML = '';
-        if (msg.type === 'prescription') {
-          extraHTML = `
-            <div style="margin-top:0.5rem; padding-top:0.5rem; border-top:1px solid rgba(255,255,255,0.2);">
-              <strong style="display:block; margin-bottom:4px; font-size:0.85rem;">Diagnosis:</strong> ${msg.diagnosis}<br>
-              <strong style="display:block; margin-top:4px; margin-bottom:4px; font-size:0.85rem;">Rx:</strong> ${msg.medicines.join(', ')}<br>
-              <strong style="display:block; margin-top:4px; margin-bottom:4px; font-size:0.85rem;">Diet:</strong> ${msg.diet}
-            </div>
-          `;
-        }
-
-        const msgDiv = document.createElement('div');
-        msgDiv.style.cssText = `margin-bottom:1rem; text-align:${align};`;
-        msgDiv.innerHTML = `
-          <div style="display:inline-block; max-width:70%; background:${bg}; color:${color}; padding:10px 14px; border-radius:12px; text-align:left; font-size:0.95rem; box-shadow:0 2px 5px rgba(0,0,0,0.05); line-height:1.5;">
-            ${msg.text || ''}
-            ${extraHTML}
-            <div style="font-size:0.75rem; margin-top:4px; opacity:0.8; text-align:right;">${msg.time}</div>
-          </div>
-        `;
-        msgList.appendChild(msgDiv);
-        msgList.scrollTop = msgList.scrollHeight;
-      }
+      renderMessages(currentConv);
     } else {
       // Show notification if it's not the active conversation
       alert("New message received from " + msg.from);
@@ -1276,7 +1292,13 @@ function openConversation(convId) {
         <p>${other.role === 'doctor' ? other.specialty : 'Patient'} &nbsp;·&nbsp; Online</p>
       </div>
       <span class="online-dot"></span>
-      ${isDoctor ? `<button class="btn btn-primary btn-sm" style="margin-left:12px" onclick="openRxModal()">Write Prescription</button>` : ''}
+      <div style="margin-left:auto; display:flex; gap:8px; align-items:center;">
+        <button class="btn btn-sm" style="background:#e8f0fe; color:#1a73e8; border:1px solid #d2e3fc; display:flex; align-items:center; gap:6px; font-weight:600;" onclick="openMeetModal()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+          Google Meet
+        </button>
+        ${isDoctor ? `<button class="btn btn-primary btn-sm" onclick="openRxModal()">Write Prescription</button>` : ''}
+      </div>
     </div>
     <div class="messages" id="msgs-${convId}"></div>
     <div class="chat-input-area">
@@ -1330,6 +1352,26 @@ function renderMessages(convId) {
             ${msg.diet ? `<div class="rx-section"><div class="rx-section-label">Diet & Lifestyle</div><div class="rx-item"><span class="rx-dot"></span>${msg.diet}</div></div>` : ''}
             ${msg.reports ? `<div class="rx-section"><div class="rx-section-label">Reports / Findings</div><div class="rx-item"><span class="rx-dot"></span>${msg.reports}</div></div>` : ''}
             ${msg.notes ? `<div class="rx-footer">${msg.notes}</div>` : ''}
+          </div>
+          <div class="msg-meta"><span>${msg.time}</span></div>`;
+      } else if(msg.type === 'meet') {
+        const isJitsi = msg.text.includes('jit.si');
+        const platformName = isJitsi ? 'Instant Video Call' : 'Google Meet Video Call';
+        const cardBorderColor = isJitsi ? 'var(--teal-400)' : '#1a73e8';
+        const buttonBgColor = isJitsi ? 'var(--teal-600)' : '#1a73e8';
+        const iconColor = isJitsi ? 'var(--teal-600)' : '#1a73e8';
+        el.innerHTML = `
+          <div class="meet-card" style="background: white; border: 1px solid var(--border); border-left: 4px solid ${cardBorderColor}; border-radius: 12px; padding: 1rem 1.2rem; max-width: 320px; text-align: left; box-shadow: 0 4px 12px rgba(0,0,0,0.03); display: flex; flex-direction: column; gap: 10px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="${iconColor}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+              <div style="font-weight: 600; font-size: 0.95rem; color: ${iconColor};">${platformName}</div>
+            </div>
+            <div style="font-size: 0.88rem; color: var(--text-sec); line-height: 1.4;">
+              You are invited to join a video consultation hosted by ${sender.name}.
+            </div>
+            <a href="${msg.text}" target="_blank" class="btn btn-sm" style="background: ${buttonBgColor}; color: white; text-align: center; text-decoration: none; border-radius: 8px; font-weight: 600; padding: 8px 12px; display: inline-block;">
+              Join Video Meeting
+            </a>
           </div>
           <div class="msg-meta"><span>${msg.time}</span></div>`;
       } else {
@@ -1423,6 +1465,56 @@ async function sendPrescription() {
     console.error(e);
   }
 }
+
+function openMeetModal() {
+  document.getElementById('meet-url-input').value = '';
+  document.getElementById('meet-modal').classList.add('open');
+}
+
+function closeMeetModal() {
+  document.getElementById('meet-modal').classList.remove('open');
+}
+
+async function sendMeetLink(type) {
+  let url = '';
+  if (type === 'jitsi') {
+    url = `https://meet.jit.si/medicare-consultation-${Date.now()}`;
+  } else {
+    url = document.getElementById('meet-url-input').value.trim();
+    if (!url) {
+      alert('Please paste a Google Meet link.');
+      return;
+    }
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      url = 'https://' + url;
+    }
+  }
+
+  const now = new Date();
+  const time = now.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+  const msgData = { 
+    conversationId: currentConv, 
+    from: currentUser, 
+    type: 'meet', 
+    text: url, 
+    time 
+  };
+
+  try {
+    const res = await fetch(BASE_URL + '/api/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(msgData)
+    });
+    if (res.ok) {
+      closeMeetModal();
+      refreshChat();
+    }
+  } catch(e) {
+    console.error(e);
+  }
+}
+
 function showSettings() {
   document.getElementById('chat-area').style.display = 'none';
   document.getElementById('settings-area').style.display = 'block';
