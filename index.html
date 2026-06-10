@@ -902,6 +902,14 @@ let socket = null;
 
 function initSocket() {
   if(socket) socket.disconnect();
+  
+  // Vercel serverless environments do not support WebSockets/Socket.io.
+  // We only initialize socket connections during local development to avoid 404 errors in production.
+  if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+    console.log("Production serverless environment detected. Falling back to HTTP polling for real-time updates.");
+    return;
+  }
+  
   socket = io();
   socket.emit('join', currentUser);
   
