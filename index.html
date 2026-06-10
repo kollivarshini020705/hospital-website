@@ -808,6 +808,25 @@
         </table>
       </div>
     </div>
+
+    <div style="background:white; border-radius:16px; padding:2rem; border:1px solid var(--border); box-shadow:0 8px 24px rgba(0,0,0,0.04); margin-top:2rem;">
+      <h3 style="font-family:'Lora', serif; color:var(--teal-900); margin-bottom:1.5rem;">Registered Doctors</h3>
+      <div style="overflow-x:auto;">
+        <table style="width:100%; border-collapse:collapse; text-align:left;">
+          <thead>
+            <tr style="border-bottom:2px solid var(--border); color:var(--text-sec); font-size:0.85rem; text-transform:uppercase; letter-spacing:0.05em;">
+              <th style="padding:1rem;">Doctor</th>
+              <th style="padding:1rem;">Specialty</th>
+              <th style="padding:1rem;">Contact Info</th>
+              <th style="padding:1rem; text-align:right;">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="admin-doctors-list">
+            <!-- Doctors dynamically rendered here -->
+          </tbody>
+        </table>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -1955,70 +1974,134 @@ async function renderBookings() {
 
 async function renderAdminDashboard() {
   try {
+    // Fetch latest users
+    const uRes = await fetch(BASE_URL + '/api/users');
+    if (uRes.ok) {
+      USERS = await uRes.json();
+    }
+
     const bRes = await fetch(BASE_URL + '/api/admin/bookings');
     let bookings = [];
     if(bRes.ok) bookings = await bRes.json();
     
     const patients = Object.values(USERS).filter(u => u.role === 'patient').length;
-    const doctors = Object.values(USERS).filter(u => u.role === 'doctor').length;
+    const doctorsList = Object.values(USERS).filter(u => u.role === 'doctor');
+    const doctors = doctorsList.length;
     
     document.getElementById('admin-stat-bookings').textContent = bookings.length;
     document.getElementById('admin-stat-patients').textContent = patients;
     document.getElementById('admin-stat-doctors').textContent = doctors;
     
+    // 1. Render Bookings
     const tbody = document.getElementById('admin-bookings-list');
     tbody.innerHTML = '';
     
     if (bookings.length === 0) {
       tbody.innerHTML = '<tr><td colspan="5" style="padding:2rem; text-align:center; color:var(--text-sec);">No bookings found in the system.</td></tr>';
-      return;
-    }
-    
-    bookings.forEach(b => {
-      let tr = document.createElement('tr');
-      tr.style.borderBottom = '1px solid var(--border)';
-      
-      const pName = USERS[b.username] ? USERS[b.username].name : b.username;
-      const dName = b.doctorId && USERS[b.doctorId] ? USERS[b.doctorId].name : b.service;
-      
-      const isCompleted = b.status === 'Completed';
-      const isCancelled = b.status === 'Cancelled';
-      let statusColor = 'var(--teal-600)';
-      let statusBg = 'var(--teal-50)';
-      if (isCompleted) { statusColor = 'var(--blue-600)'; statusBg = 'var(--blue-50)'; }
-      if (isCancelled) { statusColor = 'var(--coral-600)'; statusBg = '#fef2f2'; }
-      
-      let actionsHTML = '';
-      if (!isCompleted && !isCancelled) {
-        actionsHTML = `
-          <button class="btn btn-sm btn-outline" style="padding:4px 8px; font-size:0.75rem;" onclick="updateBookingStatus('${b._id}', 'Completed')">Complete</button>
-          <button class="btn btn-sm btn-danger" style="padding:4px 8px; font-size:0.75rem; margin-left:4px;" onclick="updateBookingStatus('${b._id}', 'Cancelled')">Cancel</button>
+    } else {
+      bookings.forEach(b => {
+        let tr = document.createElement('tr');
+        tr.style.borderBottom = '1px solid var(--border)';
+        
+        const pName = USERS[b.username] ? USERS[b.username].name : b.username;
+        const dName = b.doctorId && USERS[b.doctorId] ? USERS[b.doctorId].name : b.service;
+        
+        const isCompleted = b.status === 'Completed';
+        const isCancelled = b.status === 'Cancelled';
+        let statusColor = 'var(--teal-600)';
+        let statusBg = 'var(--teal-50)';
+        if (isCompleted) { statusColor = 'var(--blue-600)'; statusBg = 'var(--blue-50)'; }
+        if (isCancelled) { statusColor = 'var(--coral-600)'; statusBg = '#fef2f2'; }
+        
+        let actionsHTML = '';
+        if (!isCompleted && !isCancelled) {
+          actionsHTML = `
+            <button class="btn btn-sm btn-outline" style="padding:4px 8px; font-size:0.75rem;" onclick="updateBookingStatus('${b._id}', 'Completed')">Complete</button>
+            <button class="btn btn-sm btn-danger" style="padding:4px 8px; font-size:0.75rem; margin-left:4px;" onclick="updateBookingStatus('${b._id}', 'Cancelled')">Cancel</button>
+          `;
+        }
+        
+        tr.innerHTML = `
+          <td style="padding:1rem;">
+            <div style="font-weight:600; color:var(--text);">${pName}</div>
+            <div style="font-size:0.8rem; color:var(--text-sec);">${b.phone || 'No Phone'}</div>
+          </td>
+          <td style="padding:1rem;">
+            <div style="font-weight:500;">${dName}</div>
+            <div style="font-size:0.8rem; color:var(--text-sec);">${b.reason || 'No Reason'}</div>
+          </td>
+          <td style="padding:1rem; font-size:0.9rem; color:var(--text-sec);">
+            ${b.date} <br> ${b.time}
+          </td>
+          <td style="padding:1rem;">
+            <span style="padding:4px 12px; background:${statusBg}; color:${statusColor}; border-radius:20px; font-size:0.8rem; font-weight:600; white-space:nowrap;">${b.status}</span>
+          </td>
+          <td style="padding:1rem; text-align:right;">
+            ${actionsHTML}
+          </td>
         `;
-      }
-      
-      tr.innerHTML = `
-        <td style="padding:1rem;">
-          <div style="font-weight:600; color:var(--text);">${pName}</div>
-          <div style="font-size:0.8rem; color:var(--text-sec);">${b.phone || 'No Phone'}</div>
-        </td>
-        <td style="padding:1rem;">
-          <div style="font-weight:500;">${dName}</div>
-          <div style="font-size:0.8rem; color:var(--text-sec);">${b.reason || 'No Reason'}</div>
-        </td>
-        <td style="padding:1rem; font-size:0.9rem; color:var(--text-sec);">
-          ${b.date} <br> ${b.time}
-        </td>
-        <td style="padding:1rem;">
-          <span style="padding:4px 12px; background:${statusBg}; color:${statusColor}; border-radius:20px; font-size:0.8rem; font-weight:600; white-space:nowrap;">${b.status}</span>
-        </td>
-        <td style="padding:1rem; text-align:right;">
-          ${actionsHTML}
-        </td>
-      `;
-      tbody.appendChild(tr);
-    });
+        tbody.appendChild(tr);
+      });
+    }
+
+    // 2. Render Doctors List
+    const docTbody = document.getElementById('admin-doctors-list');
+    docTbody.innerHTML = '';
+
+    if (doctorsList.length === 0) {
+      docTbody.innerHTML = '<tr><td colspan="4" style="padding:2rem; text-align:center; color:var(--text-sec);">No registered doctors found.</td></tr>';
+    } else {
+      doctorsList.forEach(d => {
+        let tr = document.createElement('tr');
+        tr.style.borderBottom = '1px solid var(--border)';
+        
+        const isBot = d.username === 'healthbot';
+        const deleteBtn = isBot 
+          ? `<span style="font-size:0.75rem; color:var(--text-sec); font-style:italic;">System Bot (Locked)</span>` 
+          : `<button class="btn btn-sm btn-danger" style="padding:4px 8px; font-size:0.75rem;" onclick="deleteDoctor('${d.username}')">Delete Doctor</button>`;
+
+        tr.innerHTML = `
+          <td style="padding:1rem;">
+            <div style="font-weight:600; color:var(--text);">${d.name || d.username}</div>
+            <div style="font-size:0.8rem; color:var(--text-sec);">${d.bio ? d.bio.substring(0, 60) + (d.bio.length > 60 ? '...' : '') : 'No bio added.'}</div>
+          </td>
+          <td style="padding:1rem; font-size:0.9rem; color:var(--text-sec);">
+            ${d.username}
+          </td>
+          <td style="padding:1rem; font-size:0.9rem;">
+            <div style="color:var(--text); font-weight:500;">${d.email || 'No Email'}</div>
+            <div style="font-size:0.8rem; color:var(--text-sec);">${d.phone || 'No Phone'}</div>
+          </td>
+          <td style="padding:1rem; text-align:right;">
+            ${deleteBtn}
+          </td>
+        `;
+        docTbody.appendChild(tr);
+      });
+    }
+
   } catch(e) {
     console.error("Admin render error", e);
+  }
+}
+
+async function deleteDoctor(username) {
+  if (!confirm(`Are you sure you want to delete Dr. ${USERS[username]?.name || username}? This will permanently delete their profile, active chats, and bookings. This action cannot be undone.`)) {
+    return;
+  }
+  try {
+    const res = await fetch(`${BASE_URL}/api/users/${username}`, {
+      method: 'DELETE'
+    });
+    if (!res.ok) {
+      const errData = await res.json();
+      throw new Error(errData.error || 'Failed to delete doctor profile.');
+    }
+    alert("Doctor profile deleted successfully.");
+    renderAdminDashboard();
+  } catch (e) {
+    console.error("Delete doctor error:", e);
+    alert("Error deleting doctor profile: " + e.message);
   }
 }
 
