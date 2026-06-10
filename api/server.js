@@ -212,7 +212,7 @@ class MockReview extends MockModel {
   static get storeKey() { return 'reviews'; }
 }
 
-// Seed HealthBot user and specialist doctors if they don't exist
+// Seed HealthBot user if it doesn't exist
 async function seedHealthBot() {
   try {
     const existing = await User.findOne({ username: 'healthbot' });
@@ -231,76 +231,8 @@ async function seedHealthBot() {
       await bot.save();
       console.log('HealthBot user seeded successfully.');
     }
-    
-    // Seed default specialist doctors for booking and transfer testing
-    const docsToSeed = [
-      {
-        username: 'drsmith',
-        password: 'password123',
-        role: 'doctor',
-        name: 'Dr. Jane Smith',
-        initials: 'JS',
-        specialty: 'Cardiology',
-        bio: 'Board-certified Cardiologist with over 15 years of experience in cardiovascular health.',
-        phone: '1-800-HEART-DOC',
-        email: 'janesmith@medicare.com'
-      },
-      {
-        username: 'drjones',
-        password: 'password123',
-        role: 'doctor',
-        name: 'Dr. Sarah Jones',
-        initials: 'SJ',
-        specialty: 'Dermatology',
-        bio: 'Specialist in skin conditions, allergies, and dermatological therapies.',
-        phone: '1-800-SKIN-DOC',
-        email: 'sarahjones@medicare.com'
-      },
-      {
-        username: 'drbrown',
-        password: 'password123',
-        role: 'doctor',
-        name: 'Dr. Robert Brown',
-        initials: 'RB',
-        specialty: 'Orthopedics',
-        bio: 'Orthopedic surgeon specialized in bone joints, fracture treatment, and muscle injuries.',
-        phone: '1-800-BONE-DOC',
-        email: 'robertbrown@medicare.com'
-      },
-      {
-        username: 'drdavis',
-        password: 'password123',
-        role: 'doctor',
-        name: 'Dr. Michael Davis',
-        initials: 'MD',
-        specialty: 'Neurology',
-        bio: 'Consultant Neurologist dealing with brain, spine, and nervous system disorders.',
-        phone: '1-800-BRAIN-DOC',
-        email: 'michaeldavis@medicare.com'
-      },
-      {
-        username: 'dradi',
-        password: 'password123',
-        role: 'doctor',
-        name: 'Dr. Aditya Kumar',
-        initials: 'AK',
-        specialty: 'General Medicine',
-        bio: 'General Physician handling acute and chronic medical conditions, primary care.',
-        phone: '1-800-GEN-PHYS',
-        email: 'adityakumar@medicare.com'
-      }
-    ];
-
-    for (const d of docsToSeed) {
-      const existingDoc = await User.findOne({ username: d.username });
-      if (!existingDoc) {
-        const doc = new User(d);
-        await doc.save();
-        console.log(`${d.name} (${d.specialty}) seeded successfully.`);
-      }
-    }
   } catch (err) {
-    console.error('Error seeding HealthBot and specialists:', err);
+    console.error('Error seeding HealthBot:', err);
   }
 }
 
