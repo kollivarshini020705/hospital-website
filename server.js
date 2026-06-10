@@ -170,6 +170,23 @@ app.post('/api/messages', async (req, res) => {
   try {
     const newMsg = new Message(req.body);
     await newMsg.save();
+    
+    const conv = await Conversation.findById(req.body.conversationId);
+    if (conv) {
+      conv.messages.push(newMsg);
+      conv.lastUpdated = new Date();
+      await conv.save();
+      
+      // We still emit for local dev, but Vercel clients rely on polling
+      const recipient = conv.participants.find(p => p !== req.body.from);
+      if (recipient && connectedUsers[recipient]) {
+        io.to(connectedUsers[recipient]).emit('newMessage', newMsg);
+      }
+      if (connectedUsers[req.body.from]) {
+        io.to(connectedUsers[req.body.from]).emit('newMessage', newMsg);
+      }
+    }
+    
     res.status(201).json(newMsg);
   } catch (error) {
     res.status(500).json({ error: error.message });

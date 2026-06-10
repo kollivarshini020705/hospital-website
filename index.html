@@ -1353,8 +1353,15 @@ async function sendMessage() {
   const msgData = { conversationId: currentConv, from: currentUser, type: 'text', text, time };
   
   try {
-    socket.emit('sendMessage', msgData);
-    input.value = '';
+    const res = await fetch('/api/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(msgData)
+    });
+    if (res.ok) {
+      input.value = '';
+      refreshChat(); // Immediately refresh to show the message
+    }
   } catch(e) {
     console.error(e);
   }
@@ -1394,8 +1401,15 @@ async function sendPrescription() {
   const msgData = { conversationId: currentConv, from: currentUser, type: 'prescription', diagnosis, medicines, diet, reports, notes, time };
 
   try {
-    socket.emit('sendMessage', msgData);
-    closeRxModal();
+    const res = await fetch('/api/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(msgData)
+    });
+    if (res.ok) {
+      closeRxModal();
+      refreshChat(); // Immediately refresh to show the prescription
+    }
   } catch(e) {
     console.error(e);
   }
