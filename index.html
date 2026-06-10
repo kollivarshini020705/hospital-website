@@ -768,7 +768,10 @@
 <!-- ADMIN AREA -->
 <div class="chat-area" id="admin-area" style="display:none; padding:2rem; overflow-y:auto; background:var(--bg-sec); width: 100%;">
   <div style="max-width:1000px; margin:0 auto;">
-    <h2 style="font-family:'Lora', serif; margin-bottom:1.5rem; color:var(--teal-900);">Hospital Command Center</h2>
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
+      <h2 style="font-family:'Lora', serif; color:var(--teal-900); margin:0;">Hospital Command Center</h2>
+      <button class="btn btn-danger btn-sm" onclick="doLogout()">Sign Out</button>
+    </div>
     
     <div style="margin-bottom: 2.5rem; border-radius: 16px; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.06);">
       <img src="images/dashboard_chat.png" alt="Telemedicine Dashboard" style="width: 100%; height: 350px; object-fit: cover; display: block;">
