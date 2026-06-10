@@ -14,10 +14,11 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '..')));
 
-// Connect to MongoDB Atlas (Legacy URI to bypass local DNS SRV issues)
-mongoose.connect("mongodb://kollivarshini020705_db_user:hospital123@ac-gxfbwbg-shard-00-00.rov2n3t.mongodb.net:27017,ac-gxfbwbg-shard-00-01.rov2n3t.mongodb.net:27017,ac-gxfbwbg-shard-00-02.rov2n3t.mongodb.net:27017/medicare?ssl=true&replicaSet=atlas-hif6bg-shard-0&authSource=admin&retryWrites=true&w=majority")
-  .then(() => console.log('Connected to MongoDB Atlas'))
-  .catch(err => console.error('MongoDB connection error:', err));
+require('dotenv').config();
+
+mongoose.connect(process.env.MONGODB_URI)
+.then(() => console.log("MongoDB Connected"))
+.catch(err => console.log(err));
 
 // Mongoose Schemas
 const userSchema = new mongoose.Schema({
