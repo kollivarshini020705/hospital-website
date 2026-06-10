@@ -1662,7 +1662,7 @@ function openBookingModal(serviceName, doctorId = null) {
     showPage('login');
     return;
   }
-  document.getElementById('booking-modal').classList.add('active');
+  document.getElementById('booking-modal').classList.add('open');
   document.getElementById('booking-success').style.display = 'none';
   document.getElementById('bookingUsername').value = currentUser;
   document.getElementById('bookingService').value = serviceName;
@@ -1673,7 +1673,7 @@ function openBookingModal(serviceName, doctorId = null) {
 }
 
 function closeBookingModal() {
-  document.getElementById('booking-modal').classList.remove('active');
+  document.getElementById('booking-modal').classList.remove('open');
 }
 
 async function submitBooking() {
