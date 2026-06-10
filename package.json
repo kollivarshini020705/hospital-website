@@ -2,9 +2,9 @@
   "name": "medicare-backend",
   "version": "1.0.0",
   "description": "Backend for Medicare Portal using Node.js and MongoDB",
-  "main": "server.js",
+  "main": "api/server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node api/server.js"
   },
   "dependencies": {
     "cors": "^2.8.5",
