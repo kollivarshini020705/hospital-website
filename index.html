@@ -740,6 +740,12 @@
           <input type="email" id="set-email" placeholder="e.g. dr.name@medicare.com">
         </div>
         <button class="btn btn-primary" style="width:100%; padding:12px; margin-top:0.5rem;" onclick="saveProfile()">Save Profile Changes</button>
+        
+        <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px dashed var(--border);">
+          <h4 style="color:var(--coral-600); margin-bottom:0.5rem; font-size:0.95rem; font-weight:600;">Danger Zone</h4>
+          <p style="font-size:0.82rem; color:var(--text-sec); margin-bottom:1rem; line-height:1.5;">Once you delete your account, all your consultation history, bookings, and profile details will be permanently removed. This cannot be undone.</p>
+          <button class="btn btn-danger" style="width:100%; padding:12px;" onclick="deleteProfile()">Delete Account</button>
+        </div>
       </div>
       <div id="patient-bookings-section" style="max-width:600px; margin:2rem auto 0; background:white; border-radius:16px; padding:2rem; border:1px solid var(--border); box-shadow:0 8px 24px rgba(0,0,0,0.04); display:none;">
         <h2 style="font-family:'Lora', serif; margin-bottom:1rem; color:var(--teal-900);">My Bookings</h2>
@@ -1283,6 +1289,38 @@ function renderChatList() {
   });
 }
 
+async function deleteConversation(convId) {
+  if (!confirm("Are you sure you want to delete this conversation? All messages in this chat will be permanently deleted for both participants. This cannot be undone.")) {
+    return;
+  }
+  try {
+    const res = await fetch(`${BASE_URL}/api/conversations/${convId}`, {
+      method: 'DELETE'
+    });
+    if (!res.ok) {
+      const errData = await res.json();
+      throw new Error(errData.error || 'Failed to delete conversation');
+    }
+    
+    // Remove from local cache
+    delete CONVERSATIONS[convId];
+    
+    // Reset active chat view if this was the open chat
+    if (currentConv === convId) {
+      currentConv = null;
+      document.getElementById('active-chat')?.remove();
+      document.getElementById('empty-chat').style.display = 'flex';
+    }
+    
+    // Refresh sidebar list
+    renderChatList();
+    alert("Conversation deleted successfully.");
+  } catch (e) {
+    console.error("Delete conversation error:", e);
+    alert("Error deleting conversation: " + e.message);
+  }
+}
+
 function openConversation(convId) {
   currentConv = convId;
   document.querySelectorAll('.chat-item').forEach(el => el.classList.remove('active'));
@@ -1317,6 +1355,14 @@ function openConversation(convId) {
           Google Meet
         </button>
         ${isDoctor ? `<button class="btn btn-primary btn-sm" onclick="openRxModal()">Write Prescription</button>` : ''}
+        <button class="btn btn-danger btn-sm" style="display:flex; align-items:center; justify-content:center; padding: 7px 10px;" onclick="deleteConversation('${convId}')" title="Delete Conversation">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="3 6 5 6 21 6"/>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+            <line x1="10" y1="11" x2="10" y2="17"/>
+            <line x1="14" y1="11" x2="14" y2="17"/>
+          </svg>
+        </button>
       </div>
     </div>
     <div class="messages" id="msgs-${convId}"></div>
@@ -1685,6 +1731,26 @@ async function saveProfile() {
     renderDoctorsGrid();
   } catch(e) {
     console.error("Save profile error", e);
+  }
+}
+
+async function deleteProfile() {
+  if (!confirm("Are you sure you want to delete your profile/account? This will permanently delete all your consultation history, bookings, and profile details. This action cannot be undone.")) {
+    return;
+  }
+  try {
+    const res = await fetch(`${BASE_URL}/api/users/${currentUser}`, {
+      method: 'DELETE'
+    });
+    if (!res.ok) {
+      const errData = await res.json();
+      throw new Error(errData.error || 'Failed to delete profile');
+    }
+    alert("Account deleted successfully.");
+    doLogout();
+  } catch (e) {
+    console.error("Delete profile error:", e);
+    alert("Error deleting account: " + e.message);
   }
 }
 

@@ -489,6 +489,77 @@ app.get('/api/reviews', async (req, res) => {
   }
 });
 
+app.delete('/api/users/:username', async (req, res) => {
+  try {
+    const { username } = req.params;
+    
+    // Support database-free deletion for in-memory fallback
+    if (User === MockUser) {
+      const convs = inMemoryStore.conversations.filter(c => c.participants.includes(username));
+      const convIds = convs.map(c => c._id);
+      
+      inMemoryStore.conversations = inMemoryStore.conversations.filter(c => !c.participants.includes(username));
+      inMemoryStore.messages = inMemoryStore.messages.filter(m => !convIds.includes(m.conversationId));
+      inMemoryStore.bookings = inMemoryStore.bookings.filter(b => b.username !== username && b.doctorId !== username);
+      inMemoryStore.users = inMemoryStore.users.filter(u => u.username !== username);
+      
+      console.log(`Deleted user ${username} and associated data from In-Memory fallback DB.`);
+      return res.json({ message: 'User profile and associated data deleted successfully (In-Memory).' });
+    }
+
+    // MongoDB Mongoose implementation
+    const convs = await Conversation.find({ participants: username }).lean();
+    const convIds = convs.map(c => c._id.toString());
+
+    if (convIds.length > 0) {
+      await Message.deleteMany({ conversationId: { $in: convIds } });
+      await Conversation.deleteMany({ _id: { $in: convIds } });
+    }
+
+    await Booking.deleteMany({ $or: [{ username: username }, { doctorId: username }] });
+    const result = await User.deleteOne({ username });
+
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ error: 'User not found.' });
+    }
+
+    console.log(`Deleted user ${username} and associated data from MongoDB.`);
+    res.json({ message: 'User profile and associated data deleted successfully.' });
+  } catch (error) {
+    console.error('Error deleting user profile:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.delete('/api/conversations/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Support database-free deletion for in-memory fallback
+    if (Conversation === MockConversation) {
+      inMemoryStore.conversations = inMemoryStore.conversations.filter(c => c._id !== id);
+      inMemoryStore.messages = inMemoryStore.messages.filter(m => m.conversationId !== id);
+      
+      console.log(`Deleted conversation ${id} from In-Memory fallback DB.`);
+      return res.json({ message: 'Conversation and messages deleted successfully (In-Memory).' });
+    }
+
+    // MongoDB Mongoose implementation
+    await Message.deleteMany({ conversationId: id });
+    const result = await Conversation.deleteOne({ _id: id });
+
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ error: 'Conversation not found.' });
+    }
+
+    console.log(`Deleted conversation ${id} from MongoDB.`);
+    res.json({ message: 'Conversation and messages deleted successfully.' });
+  } catch (error) {
+    console.error('Error deleting conversation:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'index.html'));
 });
