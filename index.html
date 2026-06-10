@@ -1319,7 +1319,7 @@ function openConversation(convId) {
     <div class="messages" id="msgs-${convId}"></div>
     <div class="chat-input-area">
       <div class="input-row">
-        <textarea id="msg-input" placeholder="Type your message…" rows="1" onkeydown="handleKey(event)"></textarea>
+        <textarea id="msg-input" placeholder="Type your message or drop a report file here…" rows="1" onkeydown="handleKey(event)"></textarea>
         <button class="send-btn" onclick="sendMessage()">
           <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
         </button>
@@ -1336,6 +1336,27 @@ function openConversation(convId) {
       </div>
     </div>`;
   area.appendChild(chatDiv);
+
+  // Drag & Drop reports handler
+  const msgInput = chatDiv.querySelector('#msg-input');
+  if (msgInput) {
+    msgInput.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      msgInput.style.borderColor = 'var(--teal-400)';
+    });
+    msgInput.addEventListener('dragleave', () => {
+      msgInput.style.borderColor = 'rgba(0,0,0,0.1)';
+    });
+    msgInput.addEventListener('drop', async (e) => {
+      e.preventDefault();
+      msgInput.style.borderColor = 'rgba(0,0,0,0.1)';
+      const file = e.dataTransfer.files[0];
+      if (file) {
+        handleReportUpload(file);
+      }
+    });
+  }
+
   renderMessages(convId);
 }
 
@@ -1343,6 +1364,26 @@ function renderMessages(convId) {
   const conv = CONVERSATIONS[convId];
   const container = document.getElementById('msgs-' + convId);
   if(!container) return;
+
+  // Check for auto-transfer tag in last message
+  if (conv.messages && conv.messages.length > 0) {
+    const lastMsg = conv.messages[conv.messages.length - 1];
+    if (lastMsg.from === 'healthbot' && lastMsg.text.includes('[TRANSFER:')) {
+      const transferRegex = /\[TRANSFER:\s*([^\|\]]+)/i;
+      const match = lastMsg.text.match(transferRegex);
+      if (match) {
+        const docId = match[1].trim();
+        if (window.lastTransferredMsgId !== lastMsg._id) {
+          window.lastTransferredMsgId = lastMsg._id;
+          setTimeout(() => {
+            alert(`HealthBot is automatically connecting you to our specialist: ${USERS[docId] ? USERS[docId].name : docId}`);
+            startChat(docId);
+          }, 1500);
+        }
+      }
+    }
+  }
+
   container.innerHTML = '';
   const sys = document.createElement('div');
   sys.className = 'sys-msg';
@@ -1390,9 +1431,20 @@ function renderMessages(convId) {
             </a>
           </div>
           <div class="msg-meta"><span>${msg.time}</span></div>`;
-      } else {
+      } else if(msg.type === 'report') {
         el.innerHTML = `
-          <div class="msg-bubble">${msg.text.replace(/\n/g,'<br>')}</div>
+          <div class="msg-bubble" style="border-left: 4px solid var(--blue-400); background: white;">
+            📄 <b>Uploaded Report:</b> ${msg.fileName || 'report.pdf'} (${msg.fileSize || 'Unknown size'})
+            ${msg.text && !msg.text.startsWith('[FILE_UPLOAD:') ? `<div style="margin-top: 8px; font-size: 0.85rem; opacity: 0.8; font-family: monospace; white-space: pre-wrap; max-height: 120px; overflow-y: auto;">Content:\n${msg.text}</div>` : ''}
+            <div style="margin-top: 10px;">
+              <a href="${msg.fileData || '#'}" download="${msg.fileName || 'report.pdf'}" class="btn btn-sm btn-outline" style="font-size: 0.75rem; padding: 4px 10px; border-radius: 6px; text-decoration: none; display: inline-block;">Download File</a>
+            </div>
+          </div>
+          <div class="msg-meta"><span>${msg.time}</span></div>`;
+      } else {
+        let textContent = msg.text.replace(/\[TRANSFER:\s*[^\]]+\]/gi, '').trim();
+        el.innerHTML = `
+          <div class="msg-bubble">${textContent.replace(/\n/g,'<br>')}</div>
           <div class="msg-meta">${!isSent ? `<span class="msg-sender">${sender.name.split(' ')[0]}</span> · ` : ''}<span>${msg.time}</span></div>`;
       }
       container.appendChild(el);
@@ -1408,6 +1460,57 @@ function handleKey(e) {
 function insertHint(text) {
   document.getElementById('msg-input').value = text;
   document.getElementById('msg-input').focus();
+}
+
+async function handleReportUpload(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async function(e) {
+    const fileData = e.target.result;
+    const fileName = file.name;
+    const fileSize = (file.size / 1024).toFixed(1) + " KB";
+    
+    if (file.type.startsWith('text/') || file.name.endsWith('.txt') || file.name.endsWith('.json') || file.name.endsWith('.csv')) {
+      const textReader = new FileReader();
+      textReader.onload = async function(ev) {
+        await sendReportMessage(fileName, fileData, fileSize, ev.target.result);
+      };
+      textReader.readAsText(file);
+    } else {
+      await sendReportMessage(fileName, fileData, fileSize, `[FILE_UPLOAD: ${fileName}]`);
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
+async function sendReportMessage(fileName, fileData, fileSize, text) {
+  if (!currentConv) return;
+  const now = new Date();
+  const time = now.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+  
+  const msgData = { 
+    conversationId: currentConv, 
+    from: currentUser, 
+    type: 'report', 
+    text: text, 
+    fileName: fileName,
+    fileData: fileData,
+    fileSize: fileSize,
+    time: time 
+  };
+  
+  try {
+    const res = await fetch(BASE_URL + '/api/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(msgData)
+    });
+    if (res.ok) {
+      refreshChat();
+    }
+  } catch(e) {
+    console.error(e);
+  }
 }
 
 async function sendMessage() {
