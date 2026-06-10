@@ -994,8 +994,9 @@ Always maintain memory of the conversation and refer to previous answers. Keep t
       replyText = "This sounds like a serious medical emergency. Casual treatment advice is stopped, and immediate clinical intervention is required. Please call emergency services (108 / 112) immediately.";
       const match = getDoctorBySpecialty('Cardiology');
       if (match) {
+        const docName = match.doctor.name.startsWith("Dr.") ? match.doctor.name : `Dr. ${match.doctor.name}`;
         if (match.online) {
-          replyText += `\n\nDr. ${match.doctor.name} (Cardiology/Primary Care) is currently online. I am transferring you directly to their chat room for an instant live consultation. [TRANSFER: ${match.doctor.username} | Dr. ${match.doctor.name}]`;
+          replyText += `\n\n${docName} (Cardiology/Primary Care) is currently online. I am transferring you directly to their chat room for an instant live consultation. [TRANSFER: ${match.doctor.username} | ${docName}]`;
         } else {
           const bookingId = "BK" + Math.floor(1000 + Math.random() * 9000);
           const newBooking = new Booking({
@@ -1010,7 +1011,7 @@ Always maintain memory of the conversation and refer to previous answers. Keep t
           });
           await newBooking.save();
           io.emit('newBooking', newBooking);
-          replyText += `\n\nOur specialist Dr. ${match.doctor.name} is currently offline. Their next available timing is tomorrow at 10:00 AM. I have automatically scheduled this priority appointment for you:\nDate: ${newBooking.date}\nTime: 10:00 AM\nReference: #${bookingId}. [BOOK: Cardiology]`;
+          replyText += `\n\nOur specialist ${docName} is currently offline. Their next available timing is tomorrow at 10:00 AM. I have automatically scheduled this priority appointment for you:\nDate: ${newBooking.date}\nTime: 10:00 AM\nReference: #${bookingId}. [BOOK: Cardiology]`;
         }
       }
     } else if (isReportUploaded) {
@@ -1026,8 +1027,9 @@ Always maintain memory of the conversation and refer to previous answers. Keep t
 
         const match = getDoctorBySpecialty(spec);
         if (match) {
+          const docName = match.doctor.name.startsWith("Dr.") ? match.doctor.name : `Dr. ${match.doctor.name}`;
           if (match.online) {
-            replyText += `\n\nAn online specialist, Dr. ${match.doctor.name}, is available. I recommend transferring to them immediately for live consultation. [TRANSFER: ${match.doctor.username} | Dr. ${match.doctor.name}]`;
+            replyText += `\n\nAn online specialist, ${docName}, is available. I recommend transferring to them immediately for live consultation. [TRANSFER: ${match.doctor.username} | ${docName}]`;
           } else {
             const bookingId = "BK" + Math.floor(1000 + Math.random() * 9000);
             const newBooking = new Booking({
@@ -1042,7 +1044,7 @@ Always maintain memory of the conversation and refer to previous answers. Keep t
             });
             await newBooking.save();
             io.emit('newBooking', newBooking);
-            replyText += `\n\nSince Dr. ${match.doctor.name} is currently offline, I have automatically booked a follow-up appointment for you:\nDoctor: Dr. ${match.doctor.name}\nDate: ${newBooking.date}\nTime: 10:00 AM\nReference: #${bookingId}. [BOOK: ${spec}]`;
+            replyText += `\n\nSince ${docName} is currently offline, I have automatically booked a follow-up appointment for you:\nDoctor: ${docName}\nDate: ${newBooking.date}\nTime: 10:00 AM\nReference: #${bookingId}. [BOOK: ${spec}]`;
           }
         }
       } else {
@@ -1106,8 +1108,9 @@ Always maintain memory of the conversation and refer to previous answers. Keep t
           const match = getDoctorBySpecialty(specialty);
           replyText = "Based on the details collected, your condition requires professional evaluation. Casual treatment suggestions are stopped.";
           if (match) {
+            const docName = match.doctor.name.startsWith("Dr.") ? match.doctor.name : `Dr. ${match.doctor.name}`;
             if (match.online) {
-              replyText += `\n\nDr. ${match.doctor.name} (${specialty}) is currently online. I am transferring you directly to their chat room. [TRANSFER: ${match.doctor.username} | Dr. ${match.doctor.name}]`;
+              replyText += `\n\n${docName} (${specialty}) is currently online. I am transferring you directly to their chat room. [TRANSFER: ${match.doctor.username} | ${docName}]`;
             } else {
               const bookingId = "BK" + Math.floor(1000 + Math.random() * 9000);
               const newBooking = new Booking({
@@ -1122,7 +1125,7 @@ Always maintain memory of the conversation and refer to previous answers. Keep t
               });
               await newBooking.save();
               io.emit('newBooking', newBooking);
-              replyText += `\n\nOur specialist Dr. ${match.doctor.name} (${specialty}) is currently offline. Their next available timing is tomorrow at 10:00 AM. I have automatically scheduled this priority appointment for you:\nDate: ${newBooking.date}\nTime: 10:00 AM\nReference: #${bookingId}. [BOOK: ${specialty}]`;
+              replyText += `\n\nOur specialist ${docName} (${specialty}) is currently offline. Their next available timing is tomorrow at 10:00 AM. I have automatically scheduled this priority appointment for you:\nDate: ${newBooking.date}\nTime: 10:00 AM\nReference: #${bookingId}. [BOOK: ${specialty}]`;
             }
           } else {
             replyText += `\n\nPlease book an appointment with our ${specialty} department at your earliest convenience.`;

@@ -1175,6 +1175,8 @@ async function doLogin() {
     if (response.ok) {
       err.style.display = 'none';
       currentUser = u;
+      signupRole = res.user.role;
+      USERS[u] = res.user;
       
       initSocket();
       await fetchInitialData();
@@ -1212,6 +1214,7 @@ function doLogout() {
   }
   currentUser = null;
   currentConv = null;
+  signupRole = 'patient';
   document.getElementById('login-user').value = '';
   document.getElementById('login-pass').value = '';
   updateAuthUI(false);
