@@ -702,9 +702,9 @@
         <h4 id="chat-list-label">Consultations</h4>
       </div>
       <div class="sidebar-footer" style="display:flex; flex-direction:column; gap:10px; padding:10px; border-top:1px solid var(--border);">
-        <button id="btn-my-prescriptions" class="btn btn-sm" style="background:var(--teal-50); color:var(--teal-700); border:1px solid var(--teal-200); display:none;" onclick="showPrescriptions()">💊 My Prescriptions</button>
+        <button id="btn-my-prescriptions" class="btn btn-sm" style="background:var(--teal-50); color:var(--teal-700); border:1px solid var(--teal-200); display:none;" onclick="showPrescriptions()">My Prescriptions</button>
         <div style="display:flex; gap:10px;">
-          <button class="btn btn-sm" style="flex:1; background:white; color:var(--text); border:1px solid var(--border);" onclick="showSettings()">⚙️ Settings</button>
+          <button class="btn btn-sm" style="flex:1; background:white; color:var(--text); border:1px solid var(--border);" onclick="showSettings()">Settings</button>
           <button class="btn btn-danger btn-sm" style="flex:1;" onclick="doLogout()">Sign Out</button>
         </div>
       </div>
@@ -922,7 +922,7 @@ function initSocket() {
 
     const toast = document.createElement('div');
     toast.style.cssText = 'position:fixed; bottom:20px; right:20px; background:white; border-left:4px solid var(--teal-500); padding:16px 24px; border-radius:8px; box-shadow:0 10px 25px rgba(0,0,0,0.1); z-index:9999; transform:translateX(120%); transition:transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);';
-    toast.innerHTML = `<h4 style="margin:0 0 4px 0; color:var(--teal-900);">⏱️ New Appointment Booked!</h4><p style="margin:0; font-size:0.95rem; color:var(--text-sec);">${booking.username} booked: <b>${booking.service}</b></p>`;
+    toast.innerHTML = `<h4 style="margin:0 0 4px 0; color:var(--teal-900);">New Appointment Booked!</h4><p style="margin:0; font-size:0.95rem; color:var(--text-sec);">${booking.username} booked: <b>${booking.service}</b></p>`;
     document.body.appendChild(toast);
     
     setTimeout(() => { toast.style.transform = 'translateX(0)'; }, 100);
@@ -1652,15 +1652,15 @@ async function renderBookings() {
         displayName = `Appointment with Patient: ${patient ? patient.name : b.username}`;
       }
       const extraInfo = [];
-      if (b.phone) extraInfo.push(`📞 ${b.phone}`);
-      if (b.reason) extraInfo.push(`📝 Reason: ${b.reason}`);
+      if (b.phone) extraInfo.push(`Phone: ${b.phone}`);
+      if (b.reason) extraInfo.push(`Reason: ${b.reason}`);
       const extraHTML = extraInfo.length ? `<div style="font-size:0.85rem; color:var(--text-sec); margin-top:0.4rem; padding-top:0.4rem; border-top:1px solid #e2e8f0;">${extraInfo.join('<br>')}</div>` : '';
 
       container.innerHTML += `
         <div style="padding:1rem; border:1px solid var(--border); border-radius:12px; background:#f8fafc; display:flex; justify-content:space-between; align-items:flex-start;">
           <div style="flex:1; margin-right:1rem;">
             <h4 style="color:var(--teal-900); margin-bottom:0.25rem;">${displayName}</h4>
-            <div style="font-size:0.85rem; color:var(--text-sec);">🗓 ${b.date} &nbsp;|&nbsp; 🕒 ${b.time}</div>
+            <div style="font-size:0.85rem; color:var(--text-sec);">Date: ${b.date} &nbsp;|&nbsp; Time: ${b.time}</div>
             ${extraHTML}
           </div>
           <span style="padding:4px 12px; background:var(--teal-100); color:var(--teal-800); border-radius:20px; font-size:0.8rem; font-weight:600; white-space:nowrap;">${b.status}</span>
