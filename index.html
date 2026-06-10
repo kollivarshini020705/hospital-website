@@ -1002,6 +1002,22 @@ async function fetchInitialData() {
     
     const convRes = await fetch(`${BASE_URL}/api/conversations/${currentUser}`);
     if(convRes.ok) CONVERSATIONS = await convRes.json();
+
+    // Auto-create HealthBot conversation for patients on initial data load
+    const user = USERS[currentUser];
+    if (user && user.role === 'patient') {
+      const hasBotConv = Object.values(CONVERSATIONS).some(c => c.participants.includes('healthbot'));
+      if (!hasBotConv) {
+        await fetch(BASE_URL + '/api/conversations', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ participants: [currentUser, 'healthbot'] })
+        });
+        // Reload conversations
+        const updatedConvRes = await fetch(`${BASE_URL}/api/conversations/${currentUser}`);
+        if(updatedConvRes.ok) CONVERSATIONS = await updatedConvRes.json();
+      }
+    }
   } catch(e) {
     console.error("Error fetching data:", e);
   }

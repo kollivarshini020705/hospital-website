@@ -16,9 +16,7 @@ app.use(express.static(path.join(__dirname, '..')));
 
 require('dotenv').config();
 
-mongoose.connect(process.env.MONGODB_URI)
-.then(() => console.log("MongoDB Connected"))
-.catch(err => console.log(err));
+// Database connection initiated below model definitions
 
 // Mongoose Schemas
 const userSchema = new mongoose.Schema({
@@ -69,6 +67,37 @@ const reviewSchema = new mongoose.Schema({
   text: String
 });
 const Review = mongoose.model('Review', reviewSchema);
+
+// Seed HealthBot user if it doesn't exist
+async function seedHealthBot() {
+  try {
+    const existing = await User.findOne({ username: 'healthbot' });
+    if (!existing) {
+      const bot = new User({
+        username: 'healthbot',
+        password: 'healthbot_secure_password_123',
+        role: 'doctor',
+        name: 'HealthBot (AI Doctor)',
+        initials: 'HB',
+        specialty: 'Primary Care AI',
+        bio: 'Warm, calm, and professional AI-powered primary care assistant, available 24/7.',
+        phone: '1-800-AI-HEALTH',
+        email: 'healthbot@medicare.com'
+      });
+      await bot.save();
+      console.log('HealthBot user seeded successfully.');
+    }
+  } catch (err) {
+    console.error('Error seeding HealthBot:', err);
+  }
+}
+
+mongoose.connect(process.env.MONGODB_URI)
+.then(() => {
+  console.log("MongoDB Connected");
+  seedHealthBot();
+})
+.catch(err => console.log(err));
 
 // Store active socket connections
 const connectedUsers = {}; // username -> socket.id
@@ -200,6 +229,11 @@ app.post('/api/messages', async (req, res) => {
       if (connectedUsers[req.body.from]) {
         io.to(connectedUsers[req.body.from]).emit('newMessage', newMsg);
       }
+
+      // Trigger HealthBot response if recipient is the bot
+      if (recipient === 'healthbot') {
+        setTimeout(() => handleHealthBotResponse(conv._id.toString(), req.body.from, req.body.text), 1000);
+      }
     }
     
     res.status(201).json(newMsg);
@@ -295,6 +329,11 @@ io.on('connection', (socket) => {
         if (connectedUsers[data.from]) {
           io.to(connectedUsers[data.from]).emit('newMessage', newMsg);
         }
+
+        // Trigger HealthBot response if recipient is the bot
+        if (recipient === 'healthbot') {
+          setTimeout(() => handleHealthBotResponse(conv._id.toString(), data.from, data.text), 1000);
+        }
       }
     } catch (e) {
       console.error('Socket send error:', e);
@@ -307,5 +346,120 @@ io.on('connection', (socket) => {
   });
 });
 
+// --- HealthBot AI Response Engine ---
+async function handleHealthBotResponse(conversationId, patientUsername, userMessage) {
+  try {
+    const messages = await Message.find({ conversationId }).sort({ _id: 1 });
+    const userMessages = messages.filter(m => m.from === patientUsername);
+    const botMessages = messages.filter(m => m.from === 'healthbot');
+    
+    let replyText = "";
+    const cleanMsg = userMessage.toLowerCase();
+    
+    // Emergency Red Flags
+    if (cleanMsg.includes('chest pain') || cleanMsg.includes('difficulty breathing') || cleanMsg.includes('shortness of breath') || cleanMsg.includes('heart attack') || cleanMsg.includes('stroke') || cleanMsg.includes('loss of consciousness') || cleanMsg.includes('seizure') || cleanMsg.includes('poison')) {
+      replyText = "This sounds like a medical emergency. Please call emergency services (108 / 112) immediately or go to your nearest emergency room. Do not wait.";
+    } 
+    // Appointment Booking Flow
+    else if (cleanMsg.includes('book') || (cleanMsg.includes('yes') && botMessages.length > 0 && botMessages[botMessages.length - 1].text.includes('book'))) {
+      const doctors = await User.find({ role: 'doctor', username: { $ne: 'healthbot' } });
+      if (doctors.length > 0) {
+        let referralDoc = doctors[0];
+        if (cleanMsg.includes('heart') || cleanMsg.includes('cardio')) {
+          referralDoc = doctors.find(d => d.specialty?.toLowerCase().includes('cardio')) || referralDoc;
+        } else if (cleanMsg.includes('skin') || cleanMsg.includes('dermat')) {
+          referralDoc = doctors.find(d => d.specialty?.toLowerCase().includes('derm')) || referralDoc;
+        } else if (cleanMsg.includes('bone') || cleanMsg.includes('ortho') || cleanMsg.includes('joint')) {
+          referralDoc = doctors.find(d => d.specialty?.toLowerCase().includes('ortho')) || referralDoc;
+        }
+        
+        const bookingId = "BK" + Math.floor(1000 + Math.random() * 9000);
+        
+        // Save booking to DB
+        const newBooking = new Booking({
+          username: patientUsername,
+          doctorId: referralDoc.username,
+          service: `Appointment with ${referralDoc.name}`,
+          date: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0], // Tomorrow
+          time: "10:00 AM",
+          phone: "Not Provided",
+          reason: "Referral from HealthBot AI",
+          status: 'Confirmed'
+        });
+        await newBooking.save();
+
+        replyText = `Your appointment has been booked! ✓\n` +
+                    `Doctor: ${referralDoc.name}, ${referralDoc.specialty || 'General Physician'}\n` +
+                    `Date: ${newBooking.date}\n` +
+                    `Time: 10:00 AM\n` +
+                    `Mode: In-person / Video call\n` +
+                    `Reference: #${bookingId}\n\n` +
+                    `Please bring your recent reports and ID. Arrive 10 minutes early. Is there anything else you'd like help with today?`;
+      } else {
+        replyText = "No specialists are available right now. Please try booking manually from the Doctors directory. Is there anything else you'd like help with today?";
+      }
+    }
+    // Conversation State Machine
+    else if (userMessages.length <= 1) {
+      replyText = "Hello! I am HealthBot, your primary care AI assistant. I'm here to help you. Before we begin, could you please share your full name, age, and gender?";
+    } 
+    else if (userMessages.length === 2) {
+      replyText = "Thank you. To help me understand better, could you please describe your main symptom(s), how long they have been present, their severity (on a scale of 1 to 10), and if anything makes it better or worse?";
+    } 
+    else if (userMessages.length === 3) {
+      replyText = "Understood. Do you have any known allergies, existing medical conditions (like diabetes or high blood pressure), or are you currently taking any medications? Also, if you have any recent lab reports, please share their key values here.";
+    } 
+    else {
+      let diagnosis = "Mild viral illness or general fatigue";
+      let otc = "Paracetamol 500mg - 1 tablet up to three times a day as needed for fever/pain";
+      let lifestyle = "Stay well hydrated (drink 2-3 liters of water daily), rest, and eat a balanced diet of warm, easily digestible foods.";
+      
+      if (cleanMsg.includes('cough') || cleanMsg.includes('cold') || cleanMsg.includes('fever') || cleanMsg.includes('throat')) {
+        diagnosis = "Upper Respiratory Tract Infection (Common Cold or Flu)";
+        otc = "Paracetamol 500mg (1 tablet every 6 hours for fever/ache) and Cetirizine 10mg (1 tablet at night for congestion/running nose)";
+        lifestyle = "Steam inhalation twice a day, warm salt-water gargles, drink warm fluids (like herbal tea or soup), and avoid cold drinks.";
+      } else if (cleanMsg.includes('stomach') || (cleanMsg.includes('pain') && (cleanMsg.includes('diarrhea') || cleanMsg.includes('vomit') || cleanMsg.includes('nausea')))) {
+        diagnosis = "Gastroenteritis (Stomach Flu) or Food Poisoning";
+        otc = "ORS (Oral Rehydration Salts) to prevent dehydration, and Tab Paracetamol 500mg if fever/body ache is present.";
+        lifestyle = "Follow a bland BRAT diet (Bananas, Rice, Applesauce, Toast). Avoid dairy, spicy, and fatty foods. Sip water or electrolyte drinks frequently.";
+      } else if (cleanMsg.includes('headache') || cleanMsg.includes('migraine')) {
+        diagnosis = "Tension Headache or Migraine";
+        otc = "Ibuprofen 400mg or Paracetamol 500mg (1 tablet as needed)";
+        lifestyle = "Rest in a quiet, dark room. Apply a cool compress to your forehead. Maintain a regular sleep schedule and reduce screen time.";
+      }
+      
+      replyText = `**HealthBot Preliminary Assessment:**\n` +
+                  `*   **Likely Condition:** ${diagnosis}\n` +
+                  `*   **OTC Suggestion:** ${otc}\n` +
+                  `*   **Diet & Lifestyle:** ${lifestyle}\n\n` +
+                  `*Disclaimer: I am an AI health assistant. My guidance is informational and not a substitute for professional medical advice. Always consult a licensed doctor before starting, stopping, or changing any medication.*\n\n` +
+                  `I recommend scheduling an appointment with a General Physician for a formal check-up. Would you like me to book an appointment for you?`;
+    }
+    
+    const now = new Date();
+    const botMsg = new Message({
+      conversationId,
+      from: 'healthbot',
+      type: 'text',
+      text: replyText,
+      time: now.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})
+    });
+    
+    await botMsg.save();
+    
+    const conv = await Conversation.findById(conversationId);
+    if (conv) {
+      conv.messages.push(botMsg);
+      conv.lastUpdated = now;
+      await conv.save();
+      
+      if (connectedUsers[patientUsername]) {
+        io.to(connectedUsers[patientUsername]).emit('newMessage', botMsg);
+      }
+    }
+  } catch (err) {
+    console.error("HealthBot response error:", err);
+  }
+}
+
 module.exports = app;
-module.exports = app; // Added as requested
