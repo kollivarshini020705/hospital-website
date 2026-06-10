@@ -238,14 +238,43 @@ async function seedHealthBot() {
 
 mongoose.set('bufferCommands', false);
 
-mongoose.connect(process.env.MONGODB_URI, { serverSelectionTimeoutMS: 2000 })
-.then(() => {
-  console.log("MongoDB Connected");
-  seedHealthBot();
-})
-.catch(err => {
-  console.log("Failed to connect to MongoDB cluster (network/DNS block). Switching to local in-memory fallback database.");
-  enableInMemoryDb();
+let dbConnectionPromise = null;
+
+async function ensureDbConnected() {
+  if (mongoose.connection.readyState === 1) return;
+  if (User === MockUser) return;
+  if (dbConnectionPromise) return dbConnectionPromise;
+
+  dbConnectionPromise = (async () => {
+    try {
+      console.log("Connecting to MongoDB...");
+      await mongoose.connect(process.env.MONGODB_URI, { serverSelectionTimeoutMS: 3000 });
+      console.log("MongoDB Connected");
+      await seedHealthBot();
+    } catch (err) {
+      console.log("Failed to connect to MongoDB cluster (network/DNS block). Switching to local in-memory fallback database.", err);
+      enableInMemoryDb();
+    } finally {
+      dbConnectionPromise = null;
+    }
+  })();
+  return dbConnectionPromise;
+}
+
+// Trigger connection in background at startup
+ensureDbConnected().catch(err => {
+  console.error("Initial DB connection failed:", err);
+});
+
+// Database Connection Middleware for API requests
+app.use(async (req, res, next) => {
+  try {
+    await ensureDbConnected();
+    next();
+  } catch (err) {
+    console.error("Database connection middleware error:", err);
+    next();
+  }
 });
 
 function enableInMemoryDb() {
@@ -256,6 +285,7 @@ function enableInMemoryDb() {
   Review = MockReview;
   seedHealthBot();
 }
+
 
 // Store active socket connections
 const connectedUsers = {}; // username -> socket.id
