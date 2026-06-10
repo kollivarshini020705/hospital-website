@@ -588,46 +588,64 @@ Keep your tone warm, reassuring, and highly expert.`;
                     `Time: 10:00 AM\n` +
                     `Mode: In-person / Video call\n` +
                     `Reference: #${bookingId}\n\n` +
-                    `Please bring your recent reports and ID. Arrive 10 minutes early. Is there anything else you'd like help with today?`;
+                    `Please bring your recent reports and ID. Arrive 10 minutes early.`;
       } else {
-        replyText = "No specialists are available right now. Please try booking manually from the Doctors directory. Is there anything else you'd like help with today?";
+        replyText = "No specialists are available right now. Please try booking manually from the Doctors directory.";
       }
     }
-    // Conversation State Machine
-    else if (userMessages.length <= 1) {
-      replyText = "Hello! I am HealthBot, your primary care AI assistant. I'm here to help you. Before we begin, could you please share your full name, age, and gender?";
-    } 
-    else if (userMessages.length === 2) {
-      replyText = "Thank you. To help me understand better, could you please describe your main symptom(s), how long they have been present, their severity (on a scale of 1 to 10), and if anything makes it better or worse?";
-    } 
-    else if (userMessages.length === 3) {
-      replyText = "Understood. Do you have any known allergies, existing medical conditions (like diabetes or high blood pressure), or are you currently taking any medications? Also, if you have any recent lab reports, please share their key values here.";
-    } 
+    // General queries & Symptom matching
+    else if (cleanMsg.includes('diet') || cleanMsg.includes('food') || cleanMsg.includes('nutrition') || cleanMsg.includes('eat') || cleanMsg.includes('weight')) {
+      replyText = "To give you the best diet plan, please share your weight, height, activity level, and goals. Generally, a healthy plan consists of lean proteins, whole grains, vegetables, and drinking 2-3 liters of water daily. Avoid sugary or processed foods. Would you like me to book an appointment with a General Physician to tailor this plan?";
+    }
+    else if (cleanMsg.includes('diabetes') || cleanMsg.includes('blood sugar') || cleanMsg.includes('insulin')) {
+      replyText = "Managing diabetes requires tracking fasting & post-meal sugars. Eat low-glycemic index foods, exercise daily, and follow up with a physician to adjust medications. Avoid simple carbohydrates. Would you like me to book a general physician appointment?";
+    }
+    else if (cleanMsg.includes('cholesterol') || cleanMsg.includes('lipid') || cleanMsg.includes('heart health')) {
+      replyText = "To lower cholesterol, reduce saturated fats, avoid trans fats, and consume omega-3 fatty acids and high-fiber foods. Engage in moderate exercise. Would you like me to book a specialist appointment for you?";
+    }
+    else if (cleanMsg.includes('cough') || cleanMsg.includes('cold') || cleanMsg.includes('fever') || cleanMsg.includes('throat') || cleanMsg.includes('flu') || cleanMsg.includes('temperature')) {
+      messageType = "prescription";
+      prescriptionFields.diagnosis = "Upper Respiratory Tract Infection (Common Cold or Flu)";
+      prescriptionFields.medicines = [
+        "Paracetamol 500mg (1 tablet every 6 hours for fever/ache)",
+        "Cetirizine 10mg (1 tablet at night for congestion/running nose)"
+      ];
+      prescriptionFields.diet = "Steam inhalation twice a day, warm fluids, and warm salt-water gargles.";
+      prescriptionFields.notes = "Consult a licensed doctor before starting any medication.";
+      replyText = "I have generated a preliminary assessment for your symptoms. Please find the details in the prescription card above.";
+    }
+    else if (cleanMsg.includes('stomach') || cleanMsg.includes('diarrhea') || cleanMsg.includes('vomit') || cleanMsg.includes('nausea') || cleanMsg.includes('indigestion')) {
+      messageType = "prescription";
+      prescriptionFields.diagnosis = "Gastroenteritis (Stomach Flu) or Food Poisoning";
+      prescriptionFields.medicines = [
+        "ORS (Oral Rehydration Salts) to prevent dehydration",
+        "Tab Paracetamol 500mg if fever/body ache is present"
+      ];
+      prescriptionFields.diet = "Follow a bland BRAT diet (Bananas, Rice, Applesauce, Toast). Avoid dairy, spicy, and fatty foods. Sip electrolytes frequently.";
+      prescriptionFields.notes = "Consult a licensed doctor before starting any medication.";
+      replyText = "I have generated a preliminary assessment for your stomach issues. Please see the prescription card details above.";
+    }
+    else if (cleanMsg.includes('headache') || cleanMsg.includes('migraine')) {
+      messageType = "prescription";
+      prescriptionFields.diagnosis = "Tension Headache or Migraine";
+      prescriptionFields.medicines = ["Ibuprofen 400mg or Paracetamol 500mg (1 tablet as needed)"];
+      prescriptionFields.diet = "Rest in a quiet, dark room, apply a cool compress, and drink water.";
+      prescriptionFields.notes = "Consult a licensed doctor before starting any medication.";
+      replyText = "I have generated a preliminary assessment for your headache. Please see the prescription card details above.";
+    }
+    else if (cleanMsg.includes('hi') || cleanMsg.includes('hello') || cleanMsg.includes('hey') || cleanMsg.includes('morning')) {
+      replyText = "Hello! I am HealthBot, your primary care AI doctor. How can I assist you with your health concerns today? Please describe your symptoms or ask a medical question.";
+    }
     else {
-      let diagnosis = "Mild viral illness or general fatigue";
-      let otc = "Paracetamol 500mg - 1 tablet up to three times a day as needed for fever/pain";
-      let lifestyle = "Stay well hydrated (drink 2-3 liters of water daily), rest, and eat a balanced diet of warm, easily digestible foods.";
-      
-      if (cleanMsg.includes('cough') || cleanMsg.includes('cold') || cleanMsg.includes('fever') || cleanMsg.includes('throat')) {
-        diagnosis = "Upper Respiratory Tract Infection (Common Cold or Flu)";
-        otc = "Paracetamol 500mg (1 tablet every 6 hours for fever/ache) and Cetirizine 10mg (1 tablet at night for congestion/running nose)";
-        lifestyle = "Steam inhalation twice a day, warm salt-water gargles, drink warm fluids (like herbal tea or soup), and avoid cold drinks.";
-      } else if (cleanMsg.includes('stomach') || (cleanMsg.includes('pain') && (cleanMsg.includes('diarrhea') || cleanMsg.includes('vomit') || cleanMsg.includes('nausea')))) {
-        diagnosis = "Gastroenteritis (Stomach Flu) or Food Poisoning";
-        otc = "ORS (Oral Rehydration Salts) to prevent dehydration, and Tab Paracetamol 500mg if fever/body ache is present.";
-        lifestyle = "Follow a bland BRAT diet (Bananas, Rice, Applesauce, Toast). Avoid dairy, spicy, and fatty foods. Sip water or electrolyte drinks frequently.";
-      } else if (cleanMsg.includes('headache') || cleanMsg.includes('migraine')) {
-        diagnosis = "Tension Headache or Migraine";
-        otc = "Ibuprofen 400mg or Paracetamol 500mg (1 tablet as needed)";
-        lifestyle = "Rest in a quiet, dark room. Apply a cool compress to your forehead. Maintain a regular sleep schedule and reduce screen time.";
+      if (userMessages.length <= 1) {
+        replyText = "Hello! I am HealthBot, your primary care AI assistant. I'm here to help you. Before we begin, could you please share your full name, age, and gender?";
+      } else if (userMessages.length === 2) {
+        replyText = "Thank you. To help me understand better, could you please describe your main symptom(s), how long they have been present, their severity (on a scale of 1 to 10), and if anything makes it better or worse?";
+      } else if (userMessages.length === 3) {
+        replyText = "Understood. Do you have any known allergies, existing medical conditions (like diabetes or high blood pressure), or are you currently taking any medications? Also, if you have any recent lab reports, please share their key values here.";
+      } else {
+        replyText = "I understand you have a concern. Could you please provide more details, symptoms, duration, or any lab report values so I can assist you better?";
       }
-      
-      replyText = `**HealthBot Preliminary Assessment:**\n` +
-                  `*   **Likely Condition:** ${diagnosis}\n` +
-                  `*   **OTC Suggestion:** ${otc}\n` +
-                  `*   **Diet & Lifestyle:** ${lifestyle}\n\n` +
-                  `*Disclaimer: I am an AI health assistant. My guidance is informational and not a substitute for professional medical advice. Always consult a licensed doctor before starting, stopping, or changing any medication.*\n\n` +
-                  `I recommend scheduling an appointment with a General Physician for a formal check-up. Would you like me to book an appointment for you?`;
     }
   }
 
