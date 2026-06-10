@@ -28,7 +28,8 @@ const userSchema = new mongoose.Schema({
   specialty: String,
   bio: String,
   phone: String,
-  email: String
+  email: String,
+  gender: String
 });
 let User = mongoose.model('User', userSchema);
 
@@ -293,13 +294,13 @@ const connectedUsers = {}; // username -> socket.id
 // API Routes
 app.post('/api/signup', async (req, res) => {
   try {
-    const { username, password, role, name, specialty } = req.body;
+    const { username, password, role, name, specialty, gender } = req.body;
     
     const existing = await User.findOne({ username });
     if (existing) return res.status(400).json({ error: 'Username already exists.' });
 
     const initials = name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() || 'U';
-    const newUser = new User({ username, password, role, name, initials, specialty });
+    const newUser = new User({ username, password, role, name, initials, specialty, gender });
     await newUser.save();
 
     const otherUsers = await User.find({ role: { $ne: role } });
